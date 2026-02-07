@@ -3,7 +3,7 @@ import Phaser from "phaser";
 import { GameScene } from "./scenes/GameScene";
 import { SplashScene } from "./scenes/SplashScene";
 
-const PHYSICS_DEBUG = true;
+const PHYSICS_DEBUG = false;
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,

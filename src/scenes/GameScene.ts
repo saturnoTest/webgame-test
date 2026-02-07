@@ -458,7 +458,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverPanel.setScrollFactor(0);
 
     const titleStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: '32px',
+      fontSize: '36px',
       color: '#ffffff',
       stroke: '#141421',
       strokeThickness: 4,
@@ -466,7 +466,7 @@ export class GameScene extends Phaser.Scene {
     };
 
     const scoreStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: '22px',
+      fontSize: '24px',
       color: '#f6f7fb',
       stroke: '#141421',
       strokeThickness: 3,
@@ -563,57 +563,93 @@ export class GameScene extends Phaser.Scene {
     const panelHeight = this.gameOverPanelHeight || 320;
     const maxPanelWidth = viewportWidth * GAME_OVER_PANEL_MAX_WIDTH;
     const maxPanelHeight = viewportHeight * GAME_OVER_PANEL_MAX_HEIGHT;
-    const panelScale = Math.min(maxPanelWidth / panelWidth, maxPanelHeight / panelHeight);
+    const baseScale = Math.min(maxPanelWidth / panelWidth, maxPanelHeight / panelHeight);
+    const minPanelHeight = Math.min(320, viewportHeight * 0.8);
+    const desiredMinHeight = Math.max(240, minPanelHeight);
+    const minHeightScale = desiredMinHeight / panelHeight;
+    const panelScale = Math.min(Math.max(baseScale, minHeightScale), maxPanelWidth / panelWidth, maxPanelHeight / panelHeight);
+    const panelDisplayWidth = panelWidth * panelScale;
+    const panelDisplayHeight = panelHeight * panelScale;
 
     this.gameOverOverlay?.setSize(viewportWidth, viewportHeight);
     this.gameOverOverlay?.setDisplaySize(viewportWidth, viewportHeight);
 
     this.gameOverContainer.setPosition(viewportWidth / 2, viewportHeight / 2);
     this.gameOverPanel.setScale(1);
+    this.gameOverPanel.setDisplaySize(panelDisplayWidth, panelDisplayHeight);
 
-    const titleY = -panelHeight * 0.28;
-    const scoreY = -panelHeight * 0.1;
-    const buttonSpacing = panelHeight * 0.18;
-    const firstButtonY = panelHeight * 0.08;
-    const buttonWidth = panelWidth * 0.58;
-    const buttonHeight = panelHeight * 0.16;
+    const paddingX = Math.round(Math.min(32, Math.max(18, panelDisplayWidth * 0.08)));
+    const paddingY = Math.round(Math.min(26, Math.max(14, panelDisplayHeight * 0.07)));
+    const wrapWidth = Math.max(120, panelDisplayWidth - paddingX * 2);
+    const titleFontSize = Math.round(Phaser.Math.Clamp(36 * panelScale, 32, 38));
+    const scoreFontSize = Math.round(Phaser.Math.Clamp(24 * panelScale, 22, 26));
+    const buttonFontSize = Math.round(Phaser.Math.Clamp(22 * panelScale, 20, 24));
+    this.gameOverTitleText.setFontSize(titleFontSize);
+    this.gameOverScoreText.setFontSize(scoreFontSize);
+    this.gameOverTitleText.setWordWrapWidth(wrapWidth);
+    this.gameOverScoreText.setWordWrapWidth(wrapWidth);
 
-    this.gameOverTitleText.setPosition(0, titleY);
+    const titleHeight = this.gameOverTitleText.getBounds().height;
+    const scoreHeight = this.gameOverScoreText.getBounds().height;
+    let verticalSpacing = Math.max(14, panelDisplayHeight * 0.06);
+    let buttonSpacing = Math.max(12, panelDisplayHeight * 0.05);
+    const buttonWidth = panelDisplayWidth - paddingX * 2;
+    const baseButtonHeight = Math.max(44, panelDisplayHeight * 0.16);
+    const retryButtonHeight = baseButtonHeight * 1.08;
+    const homeButtonHeight = baseButtonHeight;
+    const availableHeight = panelDisplayHeight - paddingY * 2;
+    const baseContentHeight =
+      titleHeight + scoreHeight + retryButtonHeight + homeButtonHeight + verticalSpacing * 2 + buttonSpacing;
+    if (baseContentHeight > availableHeight) {
+      const spacingScale = Math.max(0.6, availableHeight / baseContentHeight);
+      verticalSpacing *= spacingScale;
+      buttonSpacing *= spacingScale;
+    }
+
+    const topY = -panelDisplayHeight * 0.5 + paddingY + titleHeight * 0.5;
+    this.gameOverTitleText.setPosition(0, topY);
+    const scoreY = topY + titleHeight * 0.5 + verticalSpacing + scoreHeight * 0.5;
     this.gameOverScoreText.setPosition(0, scoreY);
-
-    this.gameOverPanel.setDisplaySize(panelWidth, panelHeight);
 
     const [retryButton, homeButton] = this.gameOverButtons;
     if (retryButton && homeButton) {
       const retryImage = retryButton.getAt(0) as Phaser.GameObjects.Image;
-      retryImage.setDisplaySize(buttonWidth, buttonHeight);
-      retryButton.setSize(buttonWidth, buttonHeight);
+      const retryText = retryButton.getAt(1) as Phaser.GameObjects.Text;
+      retryImage.setDisplaySize(buttonWidth, retryButtonHeight);
+      retryButton.setSize(buttonWidth, retryButtonHeight);
+      retryText.setFontSize(buttonFontSize);
+      const firstButtonY = scoreY + scoreHeight * 0.5 + verticalSpacing + retryButtonHeight * 0.5;
       retryButton.setPosition(0, firstButtonY);
 
       const homeImage = homeButton.getAt(0) as Phaser.GameObjects.Image;
-      homeImage.setDisplaySize(buttonWidth, buttonHeight);
-      homeButton.setSize(buttonWidth, buttonHeight);
-      homeButton.setPosition(0, firstButtonY + buttonSpacing);
+      const homeText = homeButton.getAt(1) as Phaser.GameObjects.Text;
+      homeImage.setDisplaySize(buttonWidth, homeButtonHeight);
+      homeButton.setSize(buttonWidth, homeButtonHeight);
+      homeText.setFontSize(buttonFontSize);
+      homeButton.setPosition(0, firstButtonY + retryButtonHeight * 0.5 + buttonSpacing + homeButtonHeight * 0.5);
     }
 
     if (this.gameOverArrow) {
-      const arrowSize = Math.min(panelWidth, panelHeight) * 0.14;
+      const arrowSize = Math.min(panelDisplayWidth, panelDisplayHeight) * 0.12;
+      const arrowMargin = Math.max(10, Math.min(14, panelDisplayWidth * 0.04));
       this.gameOverArrow.setDisplaySize(arrowSize, arrowSize);
-      this.gameOverArrow.setPosition(-panelWidth * 0.5 + arrowSize * 0.6, -panelHeight * 0.5 + arrowSize * 0.6);
+      this.gameOverArrow.setPosition(
+        -panelDisplayWidth * 0.5 + arrowMargin + arrowSize * 0.5,
+        -panelDisplayHeight * 0.5 + arrowMargin + arrowSize * 0.5
+      );
       this.gameOverArrow.setScale(1);
     }
 
-    const targetScale = Number.isFinite(panelScale) ? panelScale : 1;
     if (animate) {
-      this.gameOverContainer.setScale(targetScale * 0.9);
+      this.gameOverContainer.setScale(0.95);
       this.tweens.add({
         targets: this.gameOverContainer,
-        scale: targetScale,
+        scale: 1,
         duration: 160,
         ease: 'Back.easeOut'
       });
     } else {
-      this.gameOverContainer.setScale(targetScale);
+      this.gameOverContainer.setScale(1);
     }
   }
 
