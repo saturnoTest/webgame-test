@@ -1,6 +1,7 @@
 import "./style.css";
 import Phaser from "phaser";
 import { GameScene } from "./scenes/GameScene";
+import { SplashScene } from "./scenes/SplashScene";
 
 const PHYSICS_DEBUG = true;
 
@@ -21,7 +22,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: PHYSICS_DEBUG,
     },
   },
-  scene: [GameScene],
+  scene: [SplashScene, GameScene],
 };
 
 new Phaser.Game(config);
