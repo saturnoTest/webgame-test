@@ -37,16 +37,26 @@ const HUD_COIN_SCALE = 0.35;
 const HUD_COIN_GAP = 6;
 const HUD_FISH_SCALE = 0.4;
 const HUD_FISH_GAP = 8;
+const FISH_SPAWN_INTERVAL = 2600;
+const FISH_SPAWN_VARIANCE = 900;
+const FISH_SPAWN_MARGIN = 40;
+const FISH_MIN_SPEED = 120;
+const FISH_MAX_SPEED = 180;
+const FISH_MIN_HEIGHT = 60;
+const FISH_MAX_HEIGHT = 160;
+const FISH_MAX_POWER = 4;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private obstacles!: Phaser.Physics.Arcade.Group;
   private coins!: Phaser.Physics.Arcade.Group;
+  private fishPickups!: Phaser.Physics.Arcade.Group;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
   private moveDirection = 0;
   private startTime = 0;
   private lastSpawnTime = 0;
+  private lastFishSpawnTime = 0;
   private scoreText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
@@ -58,12 +68,14 @@ export class GameScene extends Phaser.Scene {
   private fishText!: Phaser.GameObjects.Text;
   private fishGroup!: Phaser.GameObjects.Container;
   private fishPowerProgress = 0;
+  private fishPowerCount = 0;
   private hudBackground!: Phaser.GameObjects.Image;
   private coinsCollected = 0;
   private gameOver = false;
   private baseColor!: Phaser.GameObjects.Rectangle;
   private desertBackground!: Phaser.GameObjects.Image;
   private cloudLayer!: Phaser.GameObjects.TileSprite;
+  private groundTopY = 0;
 
   constructor() {
     super('game');
@@ -96,6 +108,7 @@ export class GameScene extends Phaser.Scene {
     const groundInset = Math.floor(groundBottomHeight * 0.35);
     const groundBottomY = height - groundBottomHeight + groundInset;
     const groundTopY = groundBottomY - groundTopHeight;
+    this.groundTopY = groundTopY;
     const tilesAcross = Math.ceil(GAME_WIDTH / groundTileWidth) + 1;
     const groundVisuals = this.add.group();
     const groundColliders = this.physics.add.staticGroup();
@@ -124,6 +137,7 @@ export class GameScene extends Phaser.Scene {
 
     this.obstacles = this.physics.add.group({ classType: Phaser.Physics.Arcade.Sprite });
     this.coins = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
+    this.fishPickups = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
 
     this.physics.add.collider(this.player, groundColliders);
     this.physics.add.collider(this.coins, groundColliders, (coin) => {
@@ -139,6 +153,11 @@ export class GameScene extends Phaser.Scene {
       const target = coin as Phaser.Physics.Arcade.Image;
       target.destroy();
       this.coinsCollected += 1;
+    });
+    this.physics.add.overlap(this.player, this.fishPickups, (_player, fish) => {
+      const target = fish as Phaser.Physics.Arcade.Image;
+      target.destroy();
+      this.setFishPowerCount(this.fishPowerCount + 1);
     });
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -164,8 +183,10 @@ export class GameScene extends Phaser.Scene {
 
     this.startTime = this.time.now;
     this.lastSpawnTime = this.time.now;
+    this.lastFishSpawnTime = this.time.now;
     this.gameOver = false;
     this.coinsCollected = 0;
+    this.setFishPowerCount(0);
   }
 
   update(time: number, delta: number) {
@@ -180,6 +201,7 @@ export class GameScene extends Phaser.Scene {
 
     this.handleMovement();
     this.handleSpawning(time);
+    this.handleFishSpawning(time);
     this.cleanupOffscreen();
     this.updateScore(time);
   }
@@ -251,6 +273,24 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private handleFishSpawning(time: number) {
+    const spawnInterval = FISH_SPAWN_INTERVAL + Phaser.Math.Between(-FISH_SPAWN_VARIANCE, FISH_SPAWN_VARIANCE);
+    if (time - this.lastFishSpawnTime < spawnInterval) {
+      return;
+    }
+
+    this.lastFishSpawnTime = time;
+    const direction = Math.random() < 0.5 ? 1 : -1;
+    const x = direction > 0 ? -FISH_SPAWN_MARGIN : GAME_WIDTH + FISH_SPAWN_MARGIN;
+    const y = this.groundTopY - Phaser.Math.Between(FISH_MIN_HEIGHT, FISH_MAX_HEIGHT);
+    const speed = Phaser.Math.Between(FISH_MIN_SPEED, FISH_MAX_SPEED) * direction;
+    const fish = this.fishPickups.create(x, y, FISH_YELLOW_REST) as Phaser.Physics.Arcade.Image;
+    const fishBody = fish.body as Phaser.Physics.Arcade.Body;
+    fish.setVelocityX(speed);
+    fishBody.setAllowGravity(false);
+    fish.setFlipX(direction < 0);
+  }
+
   private cleanupOffscreen() {
     this.obstacles.children.each((child) => {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
@@ -263,6 +303,14 @@ export class GameScene extends Phaser.Scene {
     this.coins.children.each((child) => {
       const image = child as Phaser.Physics.Arcade.Image;
       if (image.y > GAME_HEIGHT + 60) {
+        image.destroy();
+      }
+      return true;
+    });
+
+    this.fishPickups.children.each((child) => {
+      const image = child as Phaser.Physics.Arcade.Image;
+      if (image.x < -FISH_SPAWN_MARGIN * 2 || image.x > GAME_WIDTH + FISH_SPAWN_MARGIN * 2) {
         image.destroy();
       }
       return true;
@@ -287,6 +335,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setVelocity(0, 0);
     this.obstacles.setVelocityY(0);
     this.coins.setVelocityY(0);
+    this.fishPickups.setVelocityX(0);
     this.statusText.setText('Game Over\nTap o presiona Espacio para reiniciar');
     this.input.once('pointerdown', () => this.scene.restart());
   }
@@ -386,6 +435,13 @@ export class GameScene extends Phaser.Scene {
     const overlayHeight = iconHeight * (1 - this.fishPowerProgress);
     this.fishOverlay.setDisplaySize(iconWidth, overlayHeight);
     this.fishOverlay.setVisible(overlayHeight > 0);
+  }
+
+  private setFishPowerCount(count: number) {
+    this.fishPowerCount = Phaser.Math.Clamp(count, 0, FISH_MAX_POWER);
+    this.fishText.setText(`${this.fishPowerCount}/${FISH_MAX_POWER}`);
+    this.setFishPowerProgress(this.fishPowerCount / FISH_MAX_POWER);
+    this.layoutHud(this.scale.width);
   }
 
   private getCloudBandHeight(viewportHeight: number) {
