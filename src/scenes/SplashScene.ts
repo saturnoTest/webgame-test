@@ -7,9 +7,9 @@ import { SPLASH_SCREEN_BG } from '../assets/splash';
 
 const PROMPT_TEXT = 'Press any to play';
 const PROMPT_MARGIN = 64;
-const PROMPT_PADDING_X = 24;
-const PROMPT_PADDING_Y = 14;
-const OVERLAY_ALPHA = 0.42;
+const PROMPT_PADDING_X = 28;
+const PROMPT_PADDING_Y = 16;
+const OVERLAY_ALPHA = 0.54;
 
 export class SplashScene extends Phaser.Scene {
   private audioManager = new AudioManager();
@@ -45,13 +45,13 @@ export class SplashScene extends Phaser.Scene {
       fontSize: '28px',
       color: '#ffffff',
       align: 'center',
-      stroke: '#05060a',
-      strokeThickness: 5,
+      stroke: '#03050a',
+      strokeThickness: 6,
       shadow: {
         offsetX: 0,
-        offsetY: 2,
-        color: '#05060a',
-        blur: 2,
+        offsetY: 3,
+        color: '#03050a',
+        blur: 4,
         fill: true
       }
     });
@@ -62,7 +62,8 @@ export class SplashScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: this.promptText,
-      alpha: 0.78,
+      alpha: 0.85,
+      scale: 1.04,
       duration: 900,
       yoyo: true,
       repeat: -1,

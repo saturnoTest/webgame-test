@@ -36,14 +36,16 @@ const COIN_CHANCE = 0.22;
 const COIN_SCALE = 0.55;
 const CLOUD_SCROLL_SPEED = 0.006;
 const BASE_BG_COLOR = 0x9fd7ff;
-const HUD_HEIGHT = 44;
-const HUD_PADDING = 12;
+const HUD_HEIGHT = 56;
+const HUD_PADDING = 16;
+const HUD_CONTENT_OFFSET_Y = 4;
 const HUD_DEPTH = 10;
 const HUD_TEXT_DEPTH = 12;
 const HUD_COIN_SCALE = 0.35;
 const HUD_COIN_GAP = 6;
 const HUD_FISH_SCALE = 0.4;
 const HUD_FISH_GAP = 8;
+const HUD_GROUP_GAP = 16;
 const GAME_OVER_OVERLAY_ALPHA = 0.55;
 const GAME_OVER_PANEL_MAX_WIDTH = 0.78;
 const GAME_OVER_PANEL_MAX_HEIGHT = 0.6;
@@ -90,6 +92,7 @@ export class GameScene extends Phaser.Scene {
   private fishGroup!: Phaser.GameObjects.Container;
   private fishPowerProgress = 0;
   private fishPowerCount = 0;
+  private fishPulseTween?: Phaser.Tweens.Tween;
   private hudBackground!: Phaser.GameObjects.Image;
   private coinsCollected = 0;
   private gameOver = false;
@@ -560,8 +563,7 @@ export class GameScene extends Phaser.Scene {
     const container = this.add.container(0, 0, [buttonImage, buttonText]);
     container.setDepth(GAME_OVER_TEXT_DEPTH);
     container.setScrollFactor(0);
-    container.setSize(buttonImage.width, buttonImage.height);
-    container.setInteractive({ useHandCursor: true });
+    this.updateGameOverButtonHitArea(container, buttonImage.displayWidth, buttonImage.displayHeight);
     container.on('pointerover', () => {
       container.setScale(GAME_OVER_BUTTON_HOVER_SCALE);
     });
@@ -576,6 +578,15 @@ export class GameScene extends Phaser.Scene {
       onClick();
     });
     return container;
+  }
+
+  private updateGameOverButtonHitArea(container: Phaser.GameObjects.Container, width: number, height: number) {
+    container.setSize(width, height);
+    const hitArea = new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height);
+    container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+    if (container.input) {
+      container.input.cursor = 'pointer';
+    }
   }
 
   private layoutGameOverModal(viewportWidth: number, viewportHeight: number, animate = false) {
@@ -651,7 +662,7 @@ export class GameScene extends Phaser.Scene {
       const retryImage = retryButton.getAt(0) as Phaser.GameObjects.Image;
       const retryText = retryButton.getAt(1) as Phaser.GameObjects.Text;
       retryImage.setDisplaySize(buttonWidth, retryButtonHeight);
-      retryButton.setSize(buttonWidth, retryButtonHeight);
+      this.updateGameOverButtonHitArea(retryButton, buttonWidth, retryButtonHeight);
       retryText.setFontSize(buttonFontSize);
       const firstButtonY = scoreY + scoreHeight * 0.5 + verticalSpacing + retryButtonHeight * 0.5;
       retryButton.setPosition(0, firstButtonY);
@@ -659,7 +670,7 @@ export class GameScene extends Phaser.Scene {
       const homeImage = homeButton.getAt(0) as Phaser.GameObjects.Image;
       const homeText = homeButton.getAt(1) as Phaser.GameObjects.Text;
       homeImage.setDisplaySize(buttonWidth, homeButtonHeight);
-      homeButton.setSize(buttonWidth, homeButtonHeight);
+      this.updateGameOverButtonHitArea(homeButton, buttonWidth, homeButtonHeight);
       homeText.setFontSize(buttonFontSize);
       homeButton.setPosition(0, firstButtonY + retryButtonHeight * 0.5 + buttonSpacing + homeButtonHeight * 0.5);
     }
@@ -667,10 +678,14 @@ export class GameScene extends Phaser.Scene {
     if (this.gameOverArrow) {
       const arrowSize = Math.min(panelDisplayWidth, panelDisplayHeight) * 0.12;
       const arrowMargin = Math.max(10, Math.min(14, panelDisplayWidth * 0.04));
+      const arrowYOffset = Math.round(Math.min(10, panelDisplayHeight * 0.03));
       this.gameOverArrow.setDisplaySize(arrowSize, arrowSize);
       this.gameOverArrow.setPosition(
         -panelDisplayWidth * 0.5 + arrowMargin + arrowSize * 0.5,
-        -panelDisplayHeight * 0.5 + arrowMargin + arrowSize * 0.5
+        Math.max(
+          -panelDisplayHeight * 0.5 + arrowMargin + arrowSize * 0.5,
+          this.gameOverTitleText.getBounds().centerY + arrowYOffset
+        )
       );
       this.gameOverArrow.setScale(1);
     }
@@ -772,6 +787,7 @@ export class GameScene extends Phaser.Scene {
     this.fishGroup.setDepth(HUD_TEXT_DEPTH);
 
     this.setFishPowerProgress(0);
+    this.stopFishPulse();
     this.resizeHud(viewportWidth);
   }
 
@@ -781,7 +797,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private layoutHud(viewportWidth: number) {
-    const centerY = HUD_HEIGHT / 2;
+    const centerY = HUD_HEIGHT / 2 + HUD_CONTENT_OFFSET_Y;
     this.hudBackground.setPosition(0, 0);
     this.scoreText.setPosition(HUD_PADDING, centerY);
     this.timeText.setPosition(viewportWidth / 2, centerY);
@@ -792,8 +808,9 @@ export class GameScene extends Phaser.Scene {
     const fishTextWidth = this.fishText.width;
     const fishIconWidth = this.fishIcon.displayWidth;
     const fishBlockWidth = fishIconWidth + HUD_FISH_GAP + fishTextWidth;
-    const coinBlockX = viewportWidth - HUD_PADDING - coinBlockWidth;
-    const fishBlockX = coinBlockX - HUD_FISH_GAP - fishBlockWidth;
+    const rightGroupWidth = fishBlockWidth + HUD_GROUP_GAP + coinBlockWidth;
+    const fishBlockX = viewportWidth - HUD_PADDING - rightGroupWidth;
+    const coinBlockX = fishBlockX + fishBlockWidth + HUD_GROUP_GAP;
 
     this.coinIcon.setPosition(0, 0);
     this.coinText.setPosition(coinIconWidth + HUD_COIN_GAP, 0);
@@ -820,7 +837,35 @@ export class GameScene extends Phaser.Scene {
     this.fishPowerCount = Phaser.Math.Clamp(count, 0, FISH_MAX_POWER);
     this.fishText.setText(`${this.fishPowerCount}/${FISH_MAX_POWER}`);
     this.setFishPowerProgress(this.fishPowerCount / FISH_MAX_POWER);
+    if (this.fishPowerCount >= FISH_MAX_POWER) {
+      this.startFishPulse();
+    } else {
+      this.stopFishPulse();
+    }
     this.layoutHud(this.scale.width);
+  }
+
+  private startFishPulse() {
+    if (this.fishPulseTween) {
+      return;
+    }
+    this.fishGroup.setScale(1);
+    this.fishPulseTween = this.tweens.add({
+      targets: this.fishGroup,
+      scale: FISH_PULSE_MULTIPLIER,
+      duration: FISH_PULSE_DURATION,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private stopFishPulse() {
+    if (this.fishPulseTween) {
+      this.fishPulseTween.stop();
+      this.fishPulseTween = undefined;
+    }
+    this.fishGroup?.setScale(1);
   }
 
   private handleDoubleTap(event: KeyboardEvent) {
