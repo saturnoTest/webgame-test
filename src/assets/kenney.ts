@@ -14,6 +14,8 @@ export const ENEMY_BLOCK_1 = 'kenney-enemy-block-1';
 export const ENEMY_BLOCK_2 = 'kenney-enemy-block-2';
 export const TERRAIN_GRASS_TOP = 'kenney-terrain-grass-top';
 export const TERRAIN_GRASS_BOTTOM = 'kenney-terrain-grass-bottom';
+export const UI_RECTANGLE_GRADIENT = 'kenney-ui-rectangle-gradient';
+export const UI_ROUND_FLAT = 'kenney-ui-round-flat';
 
 const KENNEY_BASE_PATH = 'assets/kenney';
 
@@ -33,3 +35,5 @@ export const ENEMY_BLOCK_1_PATH = `${KENNEY_BASE_PATH}/objects-enemies/enemies/b
 export const ENEMY_BLOCK_2_PATH = `${KENNEY_BASE_PATH}/objects-enemies/enemies/blocks/block_2.png`;
 export const TERRAIN_GRASS_TOP_PATH = `${KENNEY_BASE_PATH}/tiles/ground/terrain_grass_top.png`;
 export const TERRAIN_GRASS_BOTTOM_PATH = `${KENNEY_BASE_PATH}/tiles/ground/terrain_grass_bottom.png`;
+export const UI_RECTANGLE_GRADIENT_PATH = `${KENNEY_BASE_PATH}/UI/rectangle_gradient.png`;
+export const UI_ROUND_FLAT_PATH = `${KENNEY_BASE_PATH}/UI/round_flat.png`;

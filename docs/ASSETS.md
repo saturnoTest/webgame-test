@@ -19,6 +19,7 @@ public/assets/kenney/
     idle/
     jump/
     walk/
+  UI/
 ```
 
 ## Reglas
@@ -58,6 +59,13 @@ public/assets/kenney/
 | --- | --- |
 | `TERRAIN_GRASS_TOP` | `public/assets/kenney/tiles/ground/terrain_grass_top.png` |
 | `TERRAIN_GRASS_BOTTOM` | `public/assets/kenney/tiles/ground/terrain_grass_bottom.png` |
+
+### UI
+
+| Key | Archivo | Uso previsto |
+| --- | --- | --- |
+| `UI_RECTANGLE_GRADIENT` | `public/assets/kenney/UI/rectangle_gradient.png` | Barra de estado / contenedor UI |
+| `UI_ROUND_FLAT` | `public/assets/kenney/UI/round_flat.png` | Fondo de botón o icono |
 
 ## Cómo cargar assets en Phaser
 
