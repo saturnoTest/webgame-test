@@ -6,6 +6,7 @@ import {
   COIN_1,
   ENEMY_BLOCK_1,
   ENEMY_BLOCK_2,
+  FISH_YELLOW_REST,
   KENNEY_BG_CLOUDS,
   KENNEY_BG_COLOR_DESERT,
   PLAYER_IDLE,
@@ -34,6 +35,8 @@ const HUD_DEPTH = 10;
 const HUD_TEXT_DEPTH = 12;
 const HUD_COIN_SCALE = 0.35;
 const HUD_COIN_GAP = 6;
+const HUD_FISH_SCALE = 0.4;
+const HUD_FISH_GAP = 8;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -50,6 +53,11 @@ export class GameScene extends Phaser.Scene {
   private coinIcon!: Phaser.GameObjects.Image;
   private coinText!: Phaser.GameObjects.Text;
   private coinGroup!: Phaser.GameObjects.Container;
+  private fishIcon!: Phaser.GameObjects.Image;
+  private fishOverlay!: Phaser.GameObjects.Rectangle;
+  private fishText!: Phaser.GameObjects.Text;
+  private fishGroup!: Phaser.GameObjects.Container;
+  private fishPowerProgress = 0;
   private hudBackground!: Phaser.GameObjects.Image;
   private coinsCollected = 0;
   private gameOver = false;
@@ -322,6 +330,20 @@ export class GameScene extends Phaser.Scene {
     this.coinGroup = this.add.container(0, 0, [this.coinIcon, this.coinText]);
     this.coinGroup.setDepth(HUD_TEXT_DEPTH);
 
+    this.fishIcon = this.add.image(0, 0, FISH_YELLOW_REST).setOrigin(0, 0.5);
+    this.fishIcon.setScale(HUD_FISH_SCALE);
+    this.fishIcon.setDepth(HUD_TEXT_DEPTH);
+
+    this.fishOverlay = this.add.rectangle(0, 0, 1, 1, 0x0b0b0b, 0.65).setOrigin(0, 0);
+    this.fishOverlay.setDepth(HUD_TEXT_DEPTH + 1);
+
+    this.fishText = this.add.text(0, 0, '0/4', textStyle).setOrigin(0, 0.5);
+    this.fishText.setDepth(HUD_TEXT_DEPTH);
+
+    this.fishGroup = this.add.container(0, 0, [this.fishIcon, this.fishOverlay, this.fishText]);
+    this.fishGroup.setDepth(HUD_TEXT_DEPTH);
+
+    this.setFishPowerProgress(0);
     this.resizeHud(viewportWidth);
   }
 
@@ -339,11 +361,31 @@ export class GameScene extends Phaser.Scene {
     const coinTextWidth = this.coinText.width;
     const coinIconWidth = this.coinIcon.displayWidth;
     const coinBlockWidth = coinIconWidth + HUD_COIN_GAP + coinTextWidth;
+    const fishTextWidth = this.fishText.width;
+    const fishIconWidth = this.fishIcon.displayWidth;
+    const fishBlockWidth = fishIconWidth + HUD_FISH_GAP + fishTextWidth;
     const coinBlockX = viewportWidth - HUD_PADDING - coinBlockWidth;
+    const fishBlockX = coinBlockX - HUD_FISH_GAP - fishBlockWidth;
 
     this.coinIcon.setPosition(0, 0);
     this.coinText.setPosition(coinIconWidth + HUD_COIN_GAP, 0);
     this.coinGroup.setPosition(coinBlockX, centerY);
+
+    const fishIconHeight = this.fishIcon.displayHeight;
+    this.fishIcon.setPosition(0, 0);
+    this.fishOverlay.setPosition(0, -fishIconHeight / 2);
+    this.fishText.setPosition(fishIconWidth + HUD_FISH_GAP, 0);
+    this.fishGroup.setPosition(fishBlockX, centerY);
+    this.setFishPowerProgress(this.fishPowerProgress);
+  }
+
+  private setFishPowerProgress(progress: number) {
+    this.fishPowerProgress = Phaser.Math.Clamp(progress, 0, 1);
+    const iconWidth = this.fishIcon.displayWidth;
+    const iconHeight = this.fishIcon.displayHeight;
+    const overlayHeight = iconHeight * (1 - this.fishPowerProgress);
+    this.fishOverlay.setDisplaySize(iconWidth, overlayHeight);
+    this.fishOverlay.setVisible(overlayHeight > 0);
   }
 
   private getCloudBandHeight(viewportHeight: number) {
