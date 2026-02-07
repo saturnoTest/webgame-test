@@ -39,7 +39,7 @@ export class GameScene extends Phaser.Scene {
     this.coins = this.physics.add.group();
 
     this.physics.add.collider(this.player, this.obstacles, () => this.handleGameOver());
-    this.physics.add.overlap(this.player, this.coins, (_, coin) => {
+    this.physics.add.overlap(this.player, this.coins, (_: Phaser.GameObjects.GameObject, coin: Phaser.GameObjects.GameObject) => {
       coin.destroy();
       this.coinsCollected += 1;
     });
@@ -128,14 +128,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private cleanupOffscreen() {
-    this.obstacles.children.each((child) => {
+    this.obstacles.children.each((child: Phaser.GameObjects.GameObject) => {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
       if (sprite.y > GAME_HEIGHT + 60) {
         sprite.destroy();
       }
     });
 
-    this.coins.children.each((child) => {
+    this.coins.children.each((child: Phaser.GameObjects.GameObject) => {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
       if (sprite.y > GAME_HEIGHT + 60) {
         sprite.destroy();
