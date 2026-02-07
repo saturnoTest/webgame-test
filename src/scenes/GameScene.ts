@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 
+import { AudioManager } from '../audio/AudioManager';
 import { FISH_YELLOW_SWIM_ANIM, PLAYER_ANIM_IDLE, PLAYER_ANIM_JUMP, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
+import { SFX_PICKUP_COIN, SFX_PLAYER_DEAD, SFX_PLAYER_JUMP, SFX_PLAYER_STEPS } from '../assets/audio';
 import { loadKenneyAssets } from '../assets/loadKenney';
 import {
   COIN_1,
@@ -87,6 +89,8 @@ export class GameScene extends Phaser.Scene {
   private desertBackground!: Phaser.GameObjects.Image;
   private cloudLayer!: Phaser.GameObjects.TileSprite;
   private groundTopY = 0;
+  private audioManager = new AudioManager();
+  private nextStepSfxTime = 0;
 
   constructor() {
     super('game');
@@ -177,11 +181,13 @@ export class GameScene extends Phaser.Scene {
       const target = coin as Phaser.Physics.Arcade.Image;
       target.destroy();
       this.coinsCollected += 1;
+      this.audioManager.playSfx(this, SFX_PICKUP_COIN);
     });
     this.physics.add.overlap(this.player, this.fishPickups, (_player, fish) => {
       const target = fish as Phaser.Physics.Arcade.Sprite;
       target.destroy();
       this.setFishPowerCount(this.fishPowerCount + 1);
+      this.audioManager.playSfx(this, SFX_PICKUP_COIN);
     });
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -229,6 +235,7 @@ export class GameScene extends Phaser.Scene {
     this.slideEmitter.stop();
     this.player.clearTint();
     this.setFishPowerCount(0);
+    this.nextStepSfxTime = 0;
   }
 
   update(time: number, delta: number) {
@@ -264,9 +271,11 @@ export class GameScene extends Phaser.Scene {
 
     if (isGrounded && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
       this.player.setVelocityY(this.currentJumpVelocity);
+      this.audioManager.playSfx(this, SFX_PLAYER_JUMP);
     }
 
     this.player.setVelocityX(direction * this.currentMoveSpeed);
+    this.updateStepSfx(isGrounded);
 
     if (!isGrounded) {
       this.player.anims.play(PLAYER_ANIM_JUMP, true);
@@ -396,6 +405,7 @@ export class GameScene extends Phaser.Scene {
     this.fishPickups.setVelocityX(0);
     this.statusText.setText('Game Over\nTap o presiona Espacio para reiniciar');
     this.input.once('pointerdown', () => this.scene.restart());
+    this.audioManager.playSfx(this, SFX_PLAYER_DEAD);
   }
 
   private resizeBackgrounds(width: number, height: number) {
@@ -569,6 +579,22 @@ export class GameScene extends Phaser.Scene {
     this.currentJumpVelocity = JUMP_VELOCITY;
     this.slideEmitter.stop();
     this.player.clearTint();
+  }
+
+  private updateStepSfx(isGrounded: boolean) {
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    const isMoving = Math.abs(playerBody.velocity.x) > 0.1;
+
+    if (!isGrounded || !isMoving) {
+      this.nextStepSfxTime = 0;
+      return;
+    }
+
+    const now = this.time.now;
+    if (this.nextStepSfxTime === 0 || now >= this.nextStepSfxTime) {
+      this.audioManager.playSfx(this, SFX_PLAYER_STEPS);
+      this.nextStepSfxTime = now + Phaser.Math.Between(140, 180);
+    }
   }
 
   private applyFishPulse(fish: Phaser.Physics.Arcade.Sprite) {
