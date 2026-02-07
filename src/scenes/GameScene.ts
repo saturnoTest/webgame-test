@@ -35,17 +35,18 @@ export class GameScene extends Phaser.Scene {
     this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 90, 'player');
     this.player.setCollideWorldBounds(true);
 
-    this.obstacles = this.physics.add.group();
-    this.coins = this.physics.add.group();
+    this.obstacles = this.physics.add.group({ classType: Phaser.Physics.Arcade.Sprite });
+    this.coins = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
 
     this.physics.add.collider(this.player, this.obstacles, () => this.handleGameOver());
-    this.physics.add.overlap(this.player, this.coins, (_: Phaser.GameObjects.GameObject, coin: Phaser.GameObjects.GameObject) => {
-      coin.destroy();
+    this.physics.add.overlap(this.player, this.coins, (_player, coin) => {
+      const target = coin as Phaser.Physics.Arcade.Image;
+      target.destroy();
       this.coinsCollected += 1;
     });
 
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
+    this.cursors = this.input.keyboard!.createCursorKeys();
+    this.keys = this.input.keyboard!.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       this.moveDirection = pointer.x < GAME_WIDTH / 2 ? -1 : 1;
@@ -119,7 +120,7 @@ export class GameScene extends Phaser.Scene {
     const y = -30;
 
     if (spawnType === 'coin') {
-      const coin = this.coins.create(x, y, 'coin') as Phaser.Physics.Arcade.Sprite;
+      const coin = this.coins.create(x, y, 'coin') as Phaser.Physics.Arcade.Image;
       coin.setVelocityY(fallSpeed * 0.9);
     } else {
       const obstacle = this.obstacles.create(x, y, 'obstacle') as Phaser.Physics.Arcade.Sprite;
@@ -128,18 +129,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   private cleanupOffscreen() {
-    this.obstacles.children.each((child: Phaser.GameObjects.GameObject) => {
+    this.obstacles.children.each((child) => {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
       if (sprite.y > GAME_HEIGHT + 60) {
         sprite.destroy();
       }
+      return true;
     });
 
-    this.coins.children.each((child: Phaser.GameObjects.GameObject) => {
-      const sprite = child as Phaser.Physics.Arcade.Sprite;
-      if (sprite.y > GAME_HEIGHT + 60) {
-        sprite.destroy();
+    this.coins.children.each((child) => {
+      const image = child as Phaser.Physics.Arcade.Image;
+      if (image.y > GAME_HEIGHT + 60) {
+        image.destroy();
       }
+      return true;
     });
   }
 
