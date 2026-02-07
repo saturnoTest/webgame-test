@@ -5,6 +5,8 @@ export const PLAYER_WALK_A = 'kenney-player-walk-a';
 export const PLAYER_WALK_B = 'kenney-player-walk-b';
 export const PLAYER_IDLE = 'kenney-player-idle';
 export const PLAYER_HIT = 'kenney-player-hit';
+export const PICKUP_TOKEN = 'kenney-pickup-token';
+export const HAZARD_CRATE = 'kenney-hazard-crate';
 
 const KENNEY_BASE_PATH = 'assets/kenney';
 
@@ -15,3 +17,5 @@ export const PLAYER_WALK_A_PATH = `${KENNEY_BASE_PATH}/player/walk/character_bei
 export const PLAYER_WALK_B_PATH = `${KENNEY_BASE_PATH}/player/walk/character_beige_walk_b.png`;
 export const PLAYER_IDLE_PATH = `${KENNEY_BASE_PATH}/player/idle/character_beige_idle.png`;
 export const PLAYER_HIT_PATH = `${KENNEY_BASE_PATH}/player/hit/character_beige_hit.png`;
+export const PICKUP_TOKEN_PATH = `${KENNEY_BASE_PATH}/player/front/character_beige_front.png`;
+export const HAZARD_CRATE_PATH = `${KENNEY_BASE_PATH}/player/duck/character_beige_duck.png`;
