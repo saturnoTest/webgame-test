@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 import { PLAYER_ANIM_IDLE, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
 import { loadKenneyAssets } from '../assets/loadKenney';
-import { HAZARD_CRATE, KENNEY_BG_SOLID_SKY, PICKUP_TOKEN, PLAYER_IDLE } from '../assets/kenney';
+import { COIN_1, ENEMY_BLOCK_1, ENEMY_BLOCK_2, KENNEY_BG_SOLID_SKY, PLAYER_IDLE } from '../assets/kenney';
 
 type SpawnType = 'obstacle' | 'coin';
 
@@ -142,15 +142,16 @@ export class GameScene extends Phaser.Scene {
     const y = -30;
 
     if (spawnType === 'coin') {
-      const coin = this.coins.create(x, y, PICKUP_TOKEN) as Phaser.Physics.Arcade.Image;
-      const coinRadius = Math.min(coin.width, coin.height) * 0.25;
+      const coin = this.coins.create(x, y, COIN_1) as Phaser.Physics.Arcade.Image;
+      const coinRadius = Math.min(coin.width, coin.height) * 0.35;
       coin.setCircle(coinRadius);
       coin.setOffset((coin.width - coinRadius * 2) / 2, (coin.height - coinRadius * 2) / 2);
       coin.setVelocityY(fallSpeed * 0.9);
     } else {
-      const obstacle = this.obstacles.create(x, y, HAZARD_CRATE) as Phaser.Physics.Arcade.Sprite;
-      const obstacleBodyWidth = obstacle.width * 0.55;
-      const obstacleBodyHeight = obstacle.height * 0.65;
+      const obstacleTexture = Math.random() < 0.5 ? ENEMY_BLOCK_1 : ENEMY_BLOCK_2;
+      const obstacle = this.obstacles.create(x, y, obstacleTexture) as Phaser.Physics.Arcade.Sprite;
+      const obstacleBodyWidth = obstacle.width * 0.8;
+      const obstacleBodyHeight = obstacle.height * 0.8;
       obstacle.setSize(obstacleBodyWidth, obstacleBodyHeight);
       obstacle.setOffset((obstacle.width - obstacleBodyWidth) / 2, (obstacle.height - obstacleBodyHeight) / 2);
       obstacle.setVelocityY(fallSpeed);
