@@ -5,6 +5,10 @@
 ```
 public/assets/kenney/
   backgrounds/
+  objects-enemies/
+    coins/
+    enemies/
+      blocks/
   player/
     climb/
     duck/
@@ -37,6 +41,14 @@ public/assets/kenney/
 | `PLAYER_WALK_B` | `public/assets/kenney/player/walk/character_beige_walk_b.png` |
 | `PLAYER_IDLE` | `public/assets/kenney/player/idle/character_beige_idle.png` |
 | `PLAYER_HIT` | `public/assets/kenney/player/hit/character_beige_hit.png` |
+
+### Objects & Enemies
+
+| Key | Archivo |
+| --- | --- |
+| `COIN_1` | `public/assets/kenney/objects-enemies/coins/coin_1.png` |
+| `ENEMY_BLOCK_1` | `public/assets/kenney/objects-enemies/enemies/blocks/block_1.png` |
+| `ENEMY_BLOCK_2` | `public/assets/kenney/objects-enemies/enemies/blocks/block_2.png` |
 
 ## Cómo cargar assets en Phaser
 

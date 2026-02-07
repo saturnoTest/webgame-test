@@ -7,6 +7,12 @@ import {
   KENNEY_BG_SOLID_SKY_PATH,
   HAZARD_CRATE,
   HAZARD_CRATE_PATH,
+  COIN_1,
+  COIN_1_PATH,
+  ENEMY_BLOCK_1,
+  ENEMY_BLOCK_1_PATH,
+  ENEMY_BLOCK_2,
+  ENEMY_BLOCK_2_PATH,
   PICKUP_TOKEN,
   PICKUP_TOKEN_PATH,
   PLAYER_HIT,
@@ -29,4 +35,7 @@ export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(PLAYER_HIT, PLAYER_HIT_PATH);
   scene.load.image(PICKUP_TOKEN, PICKUP_TOKEN_PATH);
   scene.load.image(HAZARD_CRATE, HAZARD_CRATE_PATH);
+  scene.load.image(COIN_1, COIN_1_PATH);
+  scene.load.image(ENEMY_BLOCK_1, ENEMY_BLOCK_1_PATH);
+  scene.load.image(ENEMY_BLOCK_2, ENEMY_BLOCK_2_PATH);
 };
