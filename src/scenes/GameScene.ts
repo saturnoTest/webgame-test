@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
 
+import { PLAYER_ANIM_IDLE, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
+import { loadKenneyAssets } from '../assets/loadKenney';
+import { KENNEY_BG_SOLID_SKY, PLAYER_IDLE } from '../assets/kenney';
+
 type SpawnType = 'obstacle' | 'coin';
 
 const GAME_WIDTH = 480;
@@ -29,11 +33,20 @@ export class GameScene extends Phaser.Scene {
     super('game');
   }
 
+  preload() {
+    loadKenneyAssets(this);
+  }
+
   create() {
     this.createTextures();
 
-    this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 90, 'player');
+    this.add.image(0, 0, KENNEY_BG_SOLID_SKY).setOrigin(0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+
+    registerKenneyAnims(this);
+
+    this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 90, PLAYER_IDLE);
     this.player.setCollideWorldBounds(true);
+    this.player.anims.play(PLAYER_ANIM_IDLE);
 
     this.obstacles = this.physics.add.group({ classType: Phaser.Physics.Arcade.Sprite });
     this.coins = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
@@ -100,6 +113,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.setVelocityX(direction * PLAYER_SPEED);
+
+    if (direction === 0) {
+      this.player.anims.play(PLAYER_ANIM_IDLE, true);
+    } else {
+      this.player.setFlipX(direction < 0);
+      this.player.anims.play(PLAYER_ANIM_WALK, true);
+    }
   }
 
   private handleSpawning(time: number) {
@@ -168,11 +188,6 @@ export class GameScene extends Phaser.Scene {
   private createTextures() {
     const graphics = this.add.graphics();
 
-    graphics.fillStyle(0x67d5ff, 1);
-    graphics.fillRoundedRect(0, 0, 60, 24, 10);
-    graphics.generateTexture('player', 60, 24);
-
-    graphics.clear();
     graphics.fillStyle(0xff4d6d, 1);
     graphics.fillRoundedRect(0, 0, 38, 38, 8);
     graphics.generateTexture('obstacle', 38, 38);
