@@ -9,6 +9,7 @@ public/assets/kenney/
     coins/
     enemies/
       blocks/
+    fish/
   tiles/
     ground/
   player/
@@ -52,6 +53,9 @@ public/assets/kenney/
 | `COIN_1` | `public/assets/kenney/objects-enemies/coins/coin_1.png` |
 | `ENEMY_BLOCK_1` | `public/assets/kenney/objects-enemies/enemies/blocks/block_1.png` |
 | `ENEMY_BLOCK_2` | `public/assets/kenney/objects-enemies/enemies/blocks/block_2.png` |
+| `FISH_YELLOW_REST` | `public/assets/kenney/objects-enemies/fish/fish_yellow_rest.png` |
+| `FISH_YELLOW_SWIM_A` | `public/assets/kenney/objects-enemies/fish/fish_yellow_swim_a.png` |
+| `FISH_YELLOW_SWIM_B` | `public/assets/kenney/objects-enemies/fish/fish_yellow_swim_b.png` |
 
 ### Ground tiles
 
