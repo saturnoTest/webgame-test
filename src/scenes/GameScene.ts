@@ -15,7 +15,10 @@ import {
   PLAYER_IDLE,
   TERRAIN_GRASS_BOTTOM,
   TERRAIN_GRASS_TOP,
+  UI_ARROW_BACK,
+  UI_BUTTON_SQUARE_BORDER,
   UI_RECTANGLE_GRADIENT,
+  UI_RECTANGLE_DEPTH_LINE,
   UI_ROUND_FLAT
 } from '../assets/kenney';
 
@@ -41,6 +44,14 @@ const HUD_COIN_SCALE = 0.35;
 const HUD_COIN_GAP = 6;
 const HUD_FISH_SCALE = 0.4;
 const HUD_FISH_GAP = 8;
+const GAME_OVER_OVERLAY_ALPHA = 0.55;
+const GAME_OVER_PANEL_MAX_WIDTH = 0.78;
+const GAME_OVER_PANEL_MAX_HEIGHT = 0.6;
+const GAME_OVER_PANEL_DEPTH = 110;
+const GAME_OVER_OVERLAY_DEPTH = 100;
+const GAME_OVER_TEXT_DEPTH = 120;
+const GAME_OVER_BUTTON_HOVER_SCALE = 1.03;
+const GAME_OVER_BUTTON_PRESS_SCALE = 0.97;
 const FISH_SPAWN_INTERVAL = 2600;
 const FISH_SPAWN_VARIANCE = 900;
 const FISH_SPAWN_MARGIN = 40;
@@ -78,6 +89,7 @@ export class GameScene extends Phaser.Scene {
   private hudBackground!: Phaser.GameObjects.Image;
   private coinsCollected = 0;
   private gameOver = false;
+  private lastScoreValue = 0;
   private slideActive = false;
   private slideEndTime = 0;
   private currentMoveSpeed = PLAYER_SPEED;
@@ -89,6 +101,15 @@ export class GameScene extends Phaser.Scene {
   private desertBackground!: Phaser.GameObjects.Image;
   private cloudLayer!: Phaser.GameObjects.TileSprite;
   private groundTopY = 0;
+  private gameOverOverlay?: Phaser.GameObjects.Rectangle;
+  private gameOverContainer?: Phaser.GameObjects.Container;
+  private gameOverPanel?: Phaser.GameObjects.Image;
+  private gameOverPanelWidth = 0;
+  private gameOverPanelHeight = 0;
+  private gameOverTitleText?: Phaser.GameObjects.Text;
+  private gameOverScoreText?: Phaser.GameObjects.Text;
+  private gameOverButtons: Phaser.GameObjects.Container[] = [];
+  private gameOverArrow?: Phaser.GameObjects.Image;
   private audioManager = new AudioManager();
   private nextStepSfxTime = 0;
   private nextSlideSfxTime = 0;
@@ -107,10 +128,7 @@ export class GameScene extends Phaser.Scene {
     this.desertBackground = this.add.image(0, 0, KENNEY_BG_COLOR_DESERT).setOrigin(0).setDepth(-20);
     this.cloudLayer = this.add.tileSprite(0, 0, width, height, KENNEY_BG_CLOUDS).setOrigin(0).setDepth(-10);
     this.resizeBackgrounds(width, height);
-    this.scale.on(Phaser.Scale.Events.RESIZE, (gameSize: Phaser.Structs.Size) => {
-      this.resizeBackgrounds(gameSize.width, gameSize.height);
-      this.resizeHud(gameSize.width);
-    });
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     registerKenneyAnims(this);
 
@@ -195,10 +213,16 @@ export class GameScene extends Phaser.Scene {
     this.keys = this.input.keyboard!.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.gameOver) {
+        return;
+      }
       this.moveDirection = pointer.x < GAME_WIDTH / 2 ? -1 : 1;
     });
 
     this.input.on('pointerup', () => {
+      if (this.gameOver) {
+        return;
+      }
       this.moveDirection = 0;
     });
 
@@ -242,6 +266,8 @@ export class GameScene extends Phaser.Scene {
     this.audioManager.startMusic(this, MUSIC_BG_NORMAL, { loop: true });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.audioManager.stopMusic();
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+      this.destroyGameOverModal();
     });
   }
 
@@ -249,9 +275,6 @@ export class GameScene extends Phaser.Scene {
     this.cloudLayer.tilePositionX += delta * CLOUD_SCROLL_SPEED;
 
     if (this.gameOver) {
-      if (this.keys.SPACE.isDown) {
-        this.scene.restart();
-      }
       return;
     }
 
@@ -392,8 +415,8 @@ export class GameScene extends Phaser.Scene {
 
   private updateScore(time: number) {
     const elapsedSeconds = Math.max(0, (time - this.startTime) / 1000);
-    const scoreValue = Math.floor(elapsedSeconds * 10 + this.coinsCollected * 50);
-    this.scoreText.setText(`${scoreValue}`);
+    this.lastScoreValue = Math.floor(elapsedSeconds * 10 + this.coinsCollected * 50);
+    this.scoreText.setText(`${this.lastScoreValue}`);
     this.timeText.setText(`${elapsedSeconds.toFixed(1)}s`);
     this.coinText.setText(`${this.coinsCollected}`);
     this.layoutHud(this.scale.width);
@@ -410,9 +433,211 @@ export class GameScene extends Phaser.Scene {
     this.obstacles.setVelocityY(0);
     this.coins.setVelocityY(0);
     this.fishPickups.setVelocityX(0);
-    this.statusText.setText('Game Over\nTap o presiona Espacio para reiniciar');
-    this.input.once('pointerdown', () => this.scene.restart());
+    this.moveDirection = 0;
+    this.statusText.setText('');
+    this.showGameOverModal();
     this.audioManager.playSfx(this, SFX_PLAYER_DEAD);
+  }
+
+  private showGameOverModal() {
+    this.destroyGameOverModal();
+
+    const { width, height } = this.scale;
+    this.gameOverOverlay = this.add.rectangle(0, 0, width, height, 0x000000, GAME_OVER_OVERLAY_ALPHA)
+      .setOrigin(0, 0)
+      .setDepth(GAME_OVER_OVERLAY_DEPTH);
+    this.gameOverOverlay.setScrollFactor(0);
+    this.gameOverOverlay.setInteractive();
+
+    const panelTexture = this.textures.get(UI_RECTANGLE_DEPTH_LINE);
+    const panelSource = panelTexture.getSourceImage() as HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
+    this.gameOverPanelWidth = panelSource?.width ?? 420;
+    this.gameOverPanelHeight = panelSource?.height ?? 320;
+
+    this.gameOverPanel = this.add.image(0, 0, UI_RECTANGLE_DEPTH_LINE).setOrigin(0.5);
+    this.gameOverPanel.setScrollFactor(0);
+
+    const titleStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '32px',
+      color: '#ffffff',
+      stroke: '#141421',
+      strokeThickness: 4,
+      align: 'center'
+    };
+
+    const scoreStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '22px',
+      color: '#f6f7fb',
+      stroke: '#141421',
+      strokeThickness: 3,
+      align: 'center'
+    };
+
+    const buttonStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '22px',
+      color: '#f6f7fb',
+      stroke: '#1d1e2c',
+      strokeThickness: 3,
+      align: 'center'
+    };
+
+    this.gameOverTitleText = this.add.text(0, 0, 'Game Over', titleStyle).setOrigin(0.5);
+    this.gameOverScoreText = this.add.text(0, 0, `Score: ${this.lastScoreValue}`, scoreStyle).setOrigin(0.5);
+
+    const retryButton = this.createGameOverButton('Reintentar', buttonStyle, () => {
+      this.destroyGameOverModal();
+      this.scene.restart();
+    });
+    const homeButton = this.createGameOverButton('Inicio', buttonStyle, () => {
+      this.destroyGameOverModal();
+      this.scene.start('splash');
+    });
+
+    this.gameOverArrow = this.add.image(0, 0, UI_ARROW_BACK).setOrigin(0.5);
+    this.gameOverArrow.setScrollFactor(0);
+    this.gameOverArrow.setInteractive({ useHandCursor: true });
+    this.gameOverArrow.on('pointerover', () => {
+      this.gameOverArrow?.setScale(GAME_OVER_BUTTON_HOVER_SCALE);
+    });
+    this.gameOverArrow.on('pointerout', () => {
+      this.gameOverArrow?.setScale(1);
+    });
+    this.gameOverArrow.on('pointerdown', () => {
+      this.gameOverArrow?.setScale(GAME_OVER_BUTTON_PRESS_SCALE);
+    });
+    this.gameOverArrow.on('pointerup', () => {
+      this.destroyGameOverModal();
+      this.scene.start('splash');
+    });
+
+    this.gameOverButtons = [retryButton, homeButton];
+    this.gameOverContainer = this.add.container(0, 0, [
+      this.gameOverPanel,
+      this.gameOverTitleText,
+      this.gameOverScoreText,
+      retryButton,
+      homeButton,
+      this.gameOverArrow
+    ]);
+    this.gameOverContainer.setDepth(GAME_OVER_PANEL_DEPTH);
+    this.gameOverContainer.setScrollFactor(0);
+
+    this.layoutGameOverModal(width, height, true);
+  }
+
+  private createGameOverButton(
+    label: string,
+    textStyle: Phaser.Types.GameObjects.Text.TextStyle,
+    onClick: () => void
+  ) {
+    const buttonImage = this.add.image(0, 0, UI_BUTTON_SQUARE_BORDER).setOrigin(0.5);
+    buttonImage.setScrollFactor(0);
+    const buttonText = this.add.text(0, 0, label, textStyle).setOrigin(0.5);
+    const container = this.add.container(0, 0, [buttonImage, buttonText]);
+    container.setDepth(GAME_OVER_TEXT_DEPTH);
+    container.setScrollFactor(0);
+    container.setSize(buttonImage.width, buttonImage.height);
+    container.setInteractive({ useHandCursor: true });
+    container.on('pointerover', () => {
+      container.setScale(GAME_OVER_BUTTON_HOVER_SCALE);
+    });
+    container.on('pointerout', () => {
+      container.setScale(1);
+    });
+    container.on('pointerdown', () => {
+      container.setScale(GAME_OVER_BUTTON_PRESS_SCALE);
+    });
+    container.on('pointerup', () => {
+      container.setScale(GAME_OVER_BUTTON_HOVER_SCALE);
+      onClick();
+    });
+    return container;
+  }
+
+  private layoutGameOverModal(viewportWidth: number, viewportHeight: number, animate = false) {
+    if (!this.gameOverContainer || !this.gameOverPanel || !this.gameOverTitleText || !this.gameOverScoreText) {
+      return;
+    }
+
+    const panelWidth = this.gameOverPanelWidth || 420;
+    const panelHeight = this.gameOverPanelHeight || 320;
+    const maxPanelWidth = viewportWidth * GAME_OVER_PANEL_MAX_WIDTH;
+    const maxPanelHeight = viewportHeight * GAME_OVER_PANEL_MAX_HEIGHT;
+    const panelScale = Math.min(maxPanelWidth / panelWidth, maxPanelHeight / panelHeight);
+
+    this.gameOverOverlay?.setSize(viewportWidth, viewportHeight);
+    this.gameOverOverlay?.setDisplaySize(viewportWidth, viewportHeight);
+
+    this.gameOverContainer.setPosition(viewportWidth / 2, viewportHeight / 2);
+    this.gameOverPanel.setScale(1);
+
+    const titleY = -panelHeight * 0.28;
+    const scoreY = -panelHeight * 0.1;
+    const buttonSpacing = panelHeight * 0.18;
+    const firstButtonY = panelHeight * 0.08;
+    const buttonWidth = panelWidth * 0.58;
+    const buttonHeight = panelHeight * 0.16;
+
+    this.gameOverTitleText.setPosition(0, titleY);
+    this.gameOverScoreText.setPosition(0, scoreY);
+
+    this.gameOverPanel.setDisplaySize(panelWidth, panelHeight);
+
+    const [retryButton, homeButton] = this.gameOverButtons;
+    if (retryButton && homeButton) {
+      const retryImage = retryButton.getAt(0) as Phaser.GameObjects.Image;
+      retryImage.setDisplaySize(buttonWidth, buttonHeight);
+      retryButton.setSize(buttonWidth, buttonHeight);
+      retryButton.setPosition(0, firstButtonY);
+
+      const homeImage = homeButton.getAt(0) as Phaser.GameObjects.Image;
+      homeImage.setDisplaySize(buttonWidth, buttonHeight);
+      homeButton.setSize(buttonWidth, buttonHeight);
+      homeButton.setPosition(0, firstButtonY + buttonSpacing);
+    }
+
+    if (this.gameOverArrow) {
+      const arrowSize = Math.min(panelWidth, panelHeight) * 0.14;
+      this.gameOverArrow.setDisplaySize(arrowSize, arrowSize);
+      this.gameOverArrow.setPosition(-panelWidth * 0.5 + arrowSize * 0.6, -panelHeight * 0.5 + arrowSize * 0.6);
+      this.gameOverArrow.setScale(1);
+    }
+
+    const targetScale = Number.isFinite(panelScale) ? panelScale : 1;
+    if (animate) {
+      this.gameOverContainer.setScale(targetScale * 0.9);
+      this.tweens.add({
+        targets: this.gameOverContainer,
+        scale: targetScale,
+        duration: 160,
+        ease: 'Back.easeOut'
+      });
+    } else {
+      this.gameOverContainer.setScale(targetScale);
+    }
+  }
+
+  private destroyGameOverModal() {
+    this.gameOverButtons.forEach((button) => button.destroy(true));
+    this.gameOverButtons = [];
+    this.gameOverArrow?.destroy(true);
+    this.gameOverArrow = undefined;
+    this.gameOverTitleText?.destroy();
+    this.gameOverTitleText = undefined;
+    this.gameOverScoreText?.destroy();
+    this.gameOverScoreText = undefined;
+    this.gameOverPanel?.destroy();
+    this.gameOverPanel = undefined;
+    this.gameOverContainer?.destroy(true);
+    this.gameOverContainer = undefined;
+    this.gameOverOverlay?.destroy();
+    this.gameOverOverlay = undefined;
+  }
+
+  private handleResize(gameSize: Phaser.Structs.Size) {
+    this.resizeBackgrounds(gameSize.width, gameSize.height);
+    this.resizeHud(gameSize.width);
+    this.layoutGameOverModal(gameSize.width, gameSize.height);
   }
 
   private resizeBackgrounds(width: number, height: number) {
