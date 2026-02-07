@@ -60,6 +60,7 @@ import {
   SFX_PLAYER_STEPS,
   SFX_PLAYER_STEPS_PATH
 } from './audio';
+import { SPLASH_SCREEN_BG, SPLASH_SCREEN_BG_PATH } from './splash';
 
 export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(KENNEY_BG_SOLID_SKY, KENNEY_BG_SOLID_SKY_PATH);
@@ -83,6 +84,7 @@ export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(TERRAIN_GRASS_BOTTOM, TERRAIN_GRASS_BOTTOM_PATH);
   scene.load.image(UI_RECTANGLE_GRADIENT, UI_RECTANGLE_GRADIENT_PATH);
   scene.load.image(UI_ROUND_FLAT, UI_ROUND_FLAT_PATH);
+  scene.load.image(SPLASH_SCREEN_BG, SPLASH_SCREEN_BG_PATH);
 
   scene.load.audio(SFX_PLAYER_DEAD, SFX_PLAYER_DEAD_PATH);
   scene.load.audio(SFX_PLAYER_JUMP, SFX_PLAYER_JUMP_PATH);
