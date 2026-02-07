@@ -13,7 +13,8 @@ import {
   PLAYER_IDLE,
   TERRAIN_GRASS_BOTTOM,
   TERRAIN_GRASS_TOP,
-  UI_RECTANGLE_GRADIENT
+  UI_RECTANGLE_GRADIENT,
+  UI_ROUND_FLAT
 } from '../assets/kenney';
 
 type SpawnType = 'obstacle' | 'coin';
@@ -75,6 +76,13 @@ export class GameScene extends Phaser.Scene {
   private hudBackground!: Phaser.GameObjects.Image;
   private coinsCollected = 0;
   private gameOver = false;
+  private slideActive = false;
+  private slideEndTime = 0;
+  private currentMoveSpeed = PLAYER_SPEED;
+  private currentJumpVelocity = JUMP_VELOCITY;
+  private lastLeftTapTime = 0;
+  private lastRightTapTime = 0;
+  private slideEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private baseColor!: Phaser.GameObjects.Rectangle;
   private desertBackground!: Phaser.GameObjects.Image;
   private cloudLayer!: Phaser.GameObjects.TileSprite;
@@ -125,6 +133,19 @@ export class GameScene extends Phaser.Scene {
     this.player.setGravityY(900);
     this.player.anims.play(PLAYER_ANIM_IDLE);
 
+    this.slideEmitter = this.add.particles(0, 0, UI_ROUND_FLAT, {
+      emitting: false,
+      lifespan: 260,
+      speed: { min: 10, max: 40 },
+      quantity: 2,
+      scale: { start: 0.18, end: 0.02 },
+      alpha: { start: 0.8, end: 0 },
+      angle: { min: 160, max: 200 },
+      blendMode: Phaser.BlendModes.ADD
+    });
+    this.slideEmitter.setDepth(5);
+    this.slideEmitter.startFollow(this.player, 0, this.player.displayHeight * 0.15);
+
     for (let i = 0; i < tilesAcross; i += 1) {
       const x = i * groundTileWidth;
       const bottomTile = this.add.image(x, groundBottomY, TERRAIN_GRASS_BOTTOM).setOrigin(0, 0).setDepth(-5);
@@ -174,6 +195,16 @@ export class GameScene extends Phaser.Scene {
       this.moveDirection = 0;
     });
 
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      if (event.repeat) {
+        return;
+      }
+      if (this.gameOver) {
+        return;
+      }
+      this.handleDoubleTap(event);
+    });
+
     this.createHud(width);
 
     this.statusText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
@@ -189,6 +220,14 @@ export class GameScene extends Phaser.Scene {
     this.lastFishSpawnTime = this.time.now;
     this.gameOver = false;
     this.coinsCollected = 0;
+    this.slideActive = false;
+    this.slideEndTime = 0;
+    this.currentMoveSpeed = PLAYER_SPEED;
+    this.currentJumpVelocity = JUMP_VELOCITY;
+    this.lastLeftTapTime = 0;
+    this.lastRightTapTime = 0;
+    this.slideEmitter.stop();
+    this.player.clearTint();
     this.setFishPowerCount(0);
   }
 
@@ -202,6 +241,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.updateSlideMax(time);
     this.handleMovement();
     this.handleSpawning(time);
     this.handleFishSpawning(time);
@@ -223,10 +263,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (isGrounded && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
-      this.player.setVelocityY(JUMP_VELOCITY);
+      this.player.setVelocityY(this.currentJumpVelocity);
     }
 
-    this.player.setVelocityX(direction * PLAYER_SPEED);
+    this.player.setVelocityX(direction * this.currentMoveSpeed);
 
     if (!isGrounded) {
       this.player.anims.play(PLAYER_ANIM_JUMP, true);
@@ -277,6 +317,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleFishSpawning(time: number) {
+    if (this.slideActive) {
+      return;
+    }
     const spawnInterval = FISH_SPAWN_INTERVAL + Phaser.Math.Between(-FISH_SPAWN_VARIANCE, FISH_SPAWN_VARIANCE);
     if (time - this.lastFishSpawnTime < spawnInterval) {
       return;
@@ -346,6 +389,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.gameOver = true;
+    this.deactivateSlideMax();
     this.player.setVelocity(0, 0);
     this.obstacles.setVelocityY(0);
     this.coins.setVelocityY(0);
@@ -456,6 +500,75 @@ export class GameScene extends Phaser.Scene {
     this.fishText.setText(`${this.fishPowerCount}/${FISH_MAX_POWER}`);
     this.setFishPowerProgress(this.fishPowerCount / FISH_MAX_POWER);
     this.layoutHud(this.scale.width);
+  }
+
+  private handleDoubleTap(event: KeyboardEvent) {
+    const now = this.time.now;
+    const isLeft = event.code === 'ArrowLeft' || event.code === 'KeyA';
+    const isRight = event.code === 'ArrowRight' || event.code === 'KeyD';
+
+    if (!isLeft && !isRight) {
+      return;
+    }
+
+    if (isLeft) {
+      if (now - this.lastLeftTapTime <= 220) {
+        this.tryActivateSlideMax();
+        this.lastLeftTapTime = 0;
+        return;
+      }
+      this.lastLeftTapTime = now;
+    }
+
+    if (isRight) {
+      if (now - this.lastRightTapTime <= 220) {
+        this.tryActivateSlideMax();
+        this.lastRightTapTime = 0;
+        return;
+      }
+      this.lastRightTapTime = now;
+    }
+  }
+
+  private tryActivateSlideMax() {
+    if (this.slideActive) {
+      return;
+    }
+    if (this.fishPowerCount < FISH_MAX_POWER) {
+      return;
+    }
+    this.activateSlideMax();
+  }
+
+  private activateSlideMax() {
+    this.slideActive = true;
+    this.slideEndTime = this.time.now + 3000;
+    this.currentMoveSpeed = PLAYER_SPEED * 2.4;
+    this.currentJumpVelocity = JUMP_VELOCITY * 1.3;
+    this.setFishPowerCount(0);
+    this.player.setTint(0x7ffcff);
+    this.slideEmitter.start();
+  }
+
+  private updateSlideMax(time: number) {
+    if (!this.slideActive) {
+      return;
+    }
+    if (time < this.slideEndTime) {
+      return;
+    }
+    this.deactivateSlideMax();
+  }
+
+  private deactivateSlideMax() {
+    if (!this.slideActive) {
+      return;
+    }
+    this.slideActive = false;
+    this.currentMoveSpeed = PLAYER_SPEED;
+    this.currentJumpVelocity = JUMP_VELOCITY;
+    this.slideEmitter.stop();
+    this.player.clearTint();
   }
 
   private applyFishPulse(fish: Phaser.Physics.Arcade.Sprite) {
