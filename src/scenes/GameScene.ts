@@ -71,22 +71,14 @@ export class GameScene extends Phaser.Scene {
     const groundTileWidth = groundTopSource?.width ?? 32;
     const groundTopHeight = groundTopSource?.height ?? 32;
     const groundBottomHeight = groundBottomSource?.height ?? 32;
-    const groundTopY = GAME_HEIGHT - (groundTopHeight + groundBottomHeight);
-    const groundBottomY = groundTopY + groundTopHeight;
+    const groundInset = Math.floor(groundBottomHeight * 0.35);
+    const groundBottomY = height - groundBottomHeight + groundInset;
+    const groundTopY = groundBottomY - groundTopHeight;
     const tilesAcross = Math.ceil(GAME_WIDTH / groundTileWidth) + 1;
     const groundVisuals = this.add.group();
     const groundColliders = this.physics.add.staticGroup();
 
-    for (let i = 0; i < tilesAcross; i += 1) {
-      const x = i * groundTileWidth;
-      const bottomTile = this.add.image(x, groundBottomY, TERRAIN_GRASS_BOTTOM).setOrigin(0, 0);
-      groundVisuals.add(bottomTile);
-      const topTile = groundColliders.create(x, groundTopY, TERRAIN_GRASS_TOP) as Phaser.Physics.Arcade.Image;
-      topTile.setOrigin(0, 0);
-      topTile.refreshBody();
-    }
-
-    this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 90, PLAYER_IDLE);
+    this.player = this.physics.add.sprite(GAME_WIDTH / 2, groundTopY - 80, PLAYER_IDLE);
     const playerBodyWidth = this.player.width * 0.65;
     const playerBodyHeight = this.player.height * 0.78;
     this.player.setSize(playerBodyWidth, playerBodyHeight);
@@ -94,6 +86,19 @@ export class GameScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.player.setGravityY(900);
     this.player.anims.play(PLAYER_ANIM_IDLE);
+
+    for (let i = 0; i < tilesAcross; i += 1) {
+      const x = i * groundTileWidth;
+      const bottomTile = this.add.image(x, groundBottomY, TERRAIN_GRASS_BOTTOM).setOrigin(0, 0).setDepth(-5);
+      groundVisuals.add(bottomTile);
+      const topTile = groundColliders.create(x, groundTopY, TERRAIN_GRASS_TOP) as Phaser.Physics.Arcade.Image;
+      topTile.setOrigin(0, 0);
+      topTile.setDepth(-5);
+      const colliderHeight = Math.max(4, Math.floor(groundTopHeight * 0.25));
+      topTile.setSize(groundTileWidth, colliderHeight);
+      topTile.setOffset(0, 0);
+      topTile.refreshBody();
+    }
 
     this.obstacles = this.physics.add.group({ classType: Phaser.Physics.Arcade.Sprite });
     this.coins = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
@@ -121,6 +126,7 @@ export class GameScene extends Phaser.Scene {
       fontSize: '20px',
       color: '#f6f7fb'
     });
+    this.scoreText.setDepth(20);
 
     this.statusText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
       fontSize: '28px',
@@ -128,6 +134,7 @@ export class GameScene extends Phaser.Scene {
       align: 'center'
     });
     this.statusText.setOrigin(0.5);
+    this.statusText.setDepth(20);
 
     this.startTime = this.time.now;
     this.lastSpawnTime = this.time.now;
