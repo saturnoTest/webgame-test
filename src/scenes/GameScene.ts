@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 
-import { PLAYER_ANIM_IDLE, PLAYER_ANIM_JUMP, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
+import { FISH_YELLOW_SWIM_ANIM, PLAYER_ANIM_IDLE, PLAYER_ANIM_JUMP, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
 import { loadKenneyAssets } from '../assets/loadKenney';
 import {
   COIN_1,
   ENEMY_BLOCK_1,
   ENEMY_BLOCK_2,
   FISH_YELLOW_REST,
+  FISH_YELLOW_SWIM_B,
   KENNEY_BG_CLOUDS,
   KENNEY_BG_COLOR_DESERT,
   PLAYER_IDLE,
@@ -45,6 +46,8 @@ const FISH_MAX_SPEED = 180;
 const FISH_MIN_HEIGHT = 60;
 const FISH_MAX_HEIGHT = 160;
 const FISH_MAX_POWER = 4;
+const FISH_PULSE_MULTIPLIER = 1.12;
+const FISH_PULSE_DURATION = 220;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -137,7 +140,7 @@ export class GameScene extends Phaser.Scene {
 
     this.obstacles = this.physics.add.group({ classType: Phaser.Physics.Arcade.Sprite });
     this.coins = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
-    this.fishPickups = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
+    this.fishPickups = this.physics.add.group({ classType: Phaser.Physics.Arcade.Sprite });
 
     this.physics.add.collider(this.player, groundColliders);
     this.physics.add.collider(this.coins, groundColliders, (coin) => {
@@ -155,7 +158,7 @@ export class GameScene extends Phaser.Scene {
       this.coinsCollected += 1;
     });
     this.physics.add.overlap(this.player, this.fishPickups, (_player, fish) => {
-      const target = fish as Phaser.Physics.Arcade.Image;
+      const target = fish as Phaser.Physics.Arcade.Sprite;
       target.destroy();
       this.setFishPowerCount(this.fishPowerCount + 1);
     });
@@ -284,11 +287,22 @@ export class GameScene extends Phaser.Scene {
     const x = direction > 0 ? -FISH_SPAWN_MARGIN : GAME_WIDTH + FISH_SPAWN_MARGIN;
     const y = this.groundTopY - Phaser.Math.Between(FISH_MIN_HEIGHT, FISH_MAX_HEIGHT);
     const speed = Phaser.Math.Between(FISH_MIN_SPEED, FISH_MAX_SPEED) * direction;
-    const fish = this.fishPickups.create(x, y, FISH_YELLOW_REST) as Phaser.Physics.Arcade.Image;
+    const fish = this.fishPickups.create(x, y, FISH_YELLOW_REST) as Phaser.Physics.Arcade.Sprite;
     const fishBody = fish.body as Phaser.Physics.Arcade.Body;
     fish.setVelocityX(speed);
     fishBody.setAllowGravity(false);
-    fish.setFlipX(direction < 0);
+    fish.setFlipX(direction > 0);
+    fish.setData('baseSpeed', speed);
+    fish.setData('pulseActive', false);
+    fish.setData('lastFrameKey', '');
+    fish.anims.play(FISH_YELLOW_SWIM_ANIM);
+    fish.on(Phaser.Animations.Events.ANIMATION_UPDATE, (_animation: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
+      const lastFrameKey = fish.getData('lastFrameKey') as string;
+      if (frame.textureKey === FISH_YELLOW_SWIM_B && lastFrameKey !== FISH_YELLOW_SWIM_B) {
+        this.applyFishPulse(fish);
+      }
+      fish.setData('lastFrameKey', frame.textureKey);
+    });
   }
 
   private cleanupOffscreen() {
@@ -309,9 +323,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.fishPickups.children.each((child) => {
-      const image = child as Phaser.Physics.Arcade.Image;
-      if (image.x < -FISH_SPAWN_MARGIN * 2 || image.x > GAME_WIDTH + FISH_SPAWN_MARGIN * 2) {
-        image.destroy();
+      const sprite = child as Phaser.Physics.Arcade.Sprite;
+      if (sprite.x < -FISH_SPAWN_MARGIN * 2 || sprite.x > GAME_WIDTH + FISH_SPAWN_MARGIN * 2) {
+        sprite.destroy();
       }
       return true;
     });
@@ -442,6 +456,38 @@ export class GameScene extends Phaser.Scene {
     this.fishText.setText(`${this.fishPowerCount}/${FISH_MAX_POWER}`);
     this.setFishPowerProgress(this.fishPowerCount / FISH_MAX_POWER);
     this.layoutHud(this.scale.width);
+  }
+
+  private applyFishPulse(fish: Phaser.Physics.Arcade.Sprite) {
+    const baseSpeed = fish.getData('baseSpeed') as number;
+    if (!Number.isFinite(baseSpeed)) {
+      return;
+    }
+
+    const pulseActive = fish.getData('pulseActive') as boolean;
+    if (pulseActive) {
+      return;
+    }
+
+    const fishBody = fish.body as Phaser.Physics.Arcade.Body;
+    fish.setData('pulseActive', true);
+    fishBody.setVelocityX(baseSpeed * FISH_PULSE_MULTIPLIER);
+
+    const existingTween = fish.getData('pulseTween') as Phaser.Tweens.Tween | undefined;
+    existingTween?.stop();
+
+    const tween = this.tweens.add({
+      targets: fishBody.velocity,
+      x: baseSpeed,
+      duration: FISH_PULSE_DURATION,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        fish.setData('pulseActive', false);
+        fish.setData('pulseTween', undefined);
+      }
+    });
+
+    fish.setData('pulseTween', tween);
   }
 
   private getCloudBandHeight(viewportHeight: number) {
