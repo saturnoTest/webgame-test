@@ -9,6 +9,8 @@ public/assets/kenney/
     coins/
     enemies/
       blocks/
+  tiles/
+    ground/
   player/
     climb/
     duck/
@@ -49,6 +51,13 @@ public/assets/kenney/
 | `COIN_1` | `public/assets/kenney/objects-enemies/coins/coin_1.png` |
 | `ENEMY_BLOCK_1` | `public/assets/kenney/objects-enemies/enemies/blocks/block_1.png` |
 | `ENEMY_BLOCK_2` | `public/assets/kenney/objects-enemies/enemies/blocks/block_2.png` |
+
+### Ground tiles
+
+| Key | Archivo |
+| --- | --- |
+| `TERRAIN_GRASS_TOP` | `public/assets/kenney/tiles/ground/terrain_grass_top.png` |
+| `TERRAIN_GRASS_BOTTOM` | `public/assets/kenney/tiles/ground/terrain_grass_bottom.png` |
 
 ## Cómo cargar assets en Phaser
 

@@ -17,6 +17,10 @@ import {
   ENEMY_BLOCK_1_PATH,
   ENEMY_BLOCK_2,
   ENEMY_BLOCK_2_PATH,
+  TERRAIN_GRASS_BOTTOM,
+  TERRAIN_GRASS_BOTTOM_PATH,
+  TERRAIN_GRASS_TOP,
+  TERRAIN_GRASS_TOP_PATH,
   PICKUP_TOKEN,
   PICKUP_TOKEN_PATH,
   PLAYER_HIT,
@@ -44,4 +48,6 @@ export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(COIN_1, COIN_1_PATH);
   scene.load.image(ENEMY_BLOCK_1, ENEMY_BLOCK_1_PATH);
   scene.load.image(ENEMY_BLOCK_2, ENEMY_BLOCK_2_PATH);
+  scene.load.image(TERRAIN_GRASS_TOP, TERRAIN_GRASS_TOP_PATH);
+  scene.load.image(TERRAIN_GRASS_BOTTOM, TERRAIN_GRASS_BOTTOM_PATH);
 };

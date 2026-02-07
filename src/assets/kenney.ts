@@ -12,6 +12,8 @@ export const HAZARD_CRATE = 'kenney-hazard-crate';
 export const COIN_1 = 'kenney-coin-1';
 export const ENEMY_BLOCK_1 = 'kenney-enemy-block-1';
 export const ENEMY_BLOCK_2 = 'kenney-enemy-block-2';
+export const TERRAIN_GRASS_TOP = 'kenney-terrain-grass-top';
+export const TERRAIN_GRASS_BOTTOM = 'kenney-terrain-grass-bottom';
 
 const KENNEY_BASE_PATH = 'assets/kenney';
 
@@ -29,3 +31,5 @@ export const HAZARD_CRATE_PATH = `${KENNEY_BASE_PATH}/player/duck/character_beig
 export const COIN_1_PATH = `${KENNEY_BASE_PATH}/objects-enemies/coins/coin_1.png`;
 export const ENEMY_BLOCK_1_PATH = `${KENNEY_BASE_PATH}/objects-enemies/enemies/blocks/block_1.png`;
 export const ENEMY_BLOCK_2_PATH = `${KENNEY_BASE_PATH}/objects-enemies/enemies/blocks/block_2.png`;
+export const TERRAIN_GRASS_TOP_PATH = `${KENNEY_BASE_PATH}/tiles/ground/terrain_grass_top.png`;
+export const TERRAIN_GRASS_BOTTOM_PATH = `${KENNEY_BASE_PATH}/tiles/ground/terrain_grass_bottom.png`;
