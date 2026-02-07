@@ -22,7 +22,7 @@ const BASE_SPAWN_INTERVAL = 900;
 const MIN_SPAWN_INTERVAL = 320;
 const COIN_CHANCE = 0.22;
 const COIN_SCALE = 0.55;
-const CLOUD_SCROLL_SPEED = 0.02;
+const CLOUD_SCROLL_SPEED = 0.006;
 const BASE_BG_COLOR = 0x9fd7ff;
 
 export class GameScene extends Phaser.Scene {
@@ -222,7 +222,17 @@ export class GameScene extends Phaser.Scene {
     this.baseColor.setSize(width, height);
     this.baseColor.setDisplaySize(width, height);
     this.desertBackground.setDisplaySize(width, height);
-    this.cloudLayer.setSize(width, height);
-    this.cloudLayer.setDisplaySize(width, height);
+    const cloudHeight = this.getCloudBandHeight(height);
+    this.cloudLayer.setPosition(0, 0);
+    this.cloudLayer.setSize(width, cloudHeight);
+    this.cloudLayer.setDisplaySize(width, cloudHeight);
+  }
+
+  private getCloudBandHeight(viewportHeight: number) {
+    const texture = this.textures.get(KENNEY_BG_CLOUDS);
+    const source = texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
+    const textureHeight = source?.height ?? viewportHeight;
+    const desiredHeight = Math.floor(viewportHeight * 0.25);
+    return Math.max(1, Math.min(desiredHeight, textureHeight));
   }
 }
