@@ -2,6 +2,8 @@ import "./style.css";
 import Phaser from "phaser";
 import { GameScene } from "./scenes/GameScene";
 
+const PHYSICS_DEBUG = true;
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: "app",
@@ -16,7 +18,7 @@ const config: Phaser.Types.Core.GameConfig = {
     default: "arcade",
     arcade: {
       gravity: { x: 0, y: 0 },
-      debug: false,
+      debug: PHYSICS_DEBUG,
     },
   },
   scene: [GameScene],

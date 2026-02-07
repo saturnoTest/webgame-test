@@ -45,6 +45,10 @@ export class GameScene extends Phaser.Scene {
     registerKenneyAnims(this);
 
     this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 90, PLAYER_IDLE);
+    const playerBodyWidth = this.player.width * 0.65;
+    const playerBodyHeight = this.player.height * 0.78;
+    this.player.setSize(playerBodyWidth, playerBodyHeight);
+    this.player.setOffset((this.player.width - playerBodyWidth) / 2, this.player.height - playerBodyHeight);
     this.player.setCollideWorldBounds(true);
     this.player.anims.play(PLAYER_ANIM_IDLE);
 
