@@ -19,6 +19,9 @@ export const TERRAIN_GRASS_TOP = 'kenney-terrain-grass-top';
 export const TERRAIN_GRASS_BOTTOM = 'kenney-terrain-grass-bottom';
 export const UI_RECTANGLE_GRADIENT = 'kenney-ui-rectangle-gradient';
 export const UI_ROUND_FLAT = 'kenney-ui-round-flat';
+export const UI_ARROW_BACK = 'kenney-ui-arrow-back';
+export const UI_BUTTON_SQUARE_BORDER = 'kenney-ui-button-square-border';
+export const UI_RECTANGLE_DEPTH_LINE = 'kenney-ui-rectangle-depth-line';
 
 const KENNEY_BASE_PATH = 'assets/kenney';
 
@@ -43,3 +46,6 @@ export const TERRAIN_GRASS_TOP_PATH = `${KENNEY_BASE_PATH}/tiles/ground/terrain_
 export const TERRAIN_GRASS_BOTTOM_PATH = `${KENNEY_BASE_PATH}/tiles/ground/terrain_grass_bottom.png`;
 export const UI_RECTANGLE_GRADIENT_PATH = `${KENNEY_BASE_PATH}/UI/rectangle_gradient.png`;
 export const UI_ROUND_FLAT_PATH = `${KENNEY_BASE_PATH}/UI/round_flat.png`;
+export const UI_ARROW_BACK_PATH = `${KENNEY_BASE_PATH}/UI/arrow_back.png`;
+export const UI_BUTTON_SQUARE_BORDER_PATH = `${KENNEY_BASE_PATH}/UI/button_square_border.png`;
+export const UI_RECTANGLE_DEPTH_LINE_PATH = `${KENNEY_BASE_PATH}/UI/rectangle_depth_line.png`;

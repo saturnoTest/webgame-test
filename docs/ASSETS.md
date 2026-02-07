@@ -70,6 +70,9 @@ public/assets/kenney/
 | --- | --- | --- |
 | `UI_RECTANGLE_GRADIENT` | `public/assets/kenney/UI/rectangle_gradient.png` | Barra de estado / contenedor UI |
 | `UI_ROUND_FLAT` | `public/assets/kenney/UI/round_flat.png` | Fondo de botón o icono |
+| `UI_ARROW_BACK` | `public/assets/kenney/UI/arrow_back.png` | Icono de navegación (volver) |
+| `UI_BUTTON_SQUARE_BORDER` | `public/assets/kenney/UI/button_square_border.png` | Botón con borde cuadrado |
+| `UI_RECTANGLE_DEPTH_LINE` | `public/assets/kenney/UI/rectangle_depth_line.png` | Panel/modal con profundidad |
 
 ## Audio
 
