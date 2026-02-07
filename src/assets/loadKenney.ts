@@ -30,7 +30,11 @@ import {
   PLAYER_WALK_A,
   PLAYER_WALK_A_PATH,
   PLAYER_WALK_B,
-  PLAYER_WALK_B_PATH
+  PLAYER_WALK_B_PATH,
+  UI_RECTANGLE_GRADIENT,
+  UI_RECTANGLE_GRADIENT_PATH,
+  UI_ROUND_FLAT,
+  UI_ROUND_FLAT_PATH
 } from './kenney';
 
 export const loadKenneyAssets = (scene: Phaser.Scene) => {
@@ -50,4 +54,6 @@ export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(ENEMY_BLOCK_2, ENEMY_BLOCK_2_PATH);
   scene.load.image(TERRAIN_GRASS_TOP, TERRAIN_GRASS_TOP_PATH);
   scene.load.image(TERRAIN_GRASS_BOTTOM, TERRAIN_GRASS_BOTTOM_PATH);
+  scene.load.image(UI_RECTANGLE_GRADIENT, UI_RECTANGLE_GRADIENT_PATH);
+  scene.load.image(UI_ROUND_FLAT, UI_ROUND_FLAT_PATH);
 };
