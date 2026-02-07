@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 import { AudioManager } from '../audio/AudioManager';
 import { FISH_YELLOW_SWIM_ANIM, PLAYER_ANIM_IDLE, PLAYER_ANIM_JUMP, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
-import { SFX_PICKUP_COIN, SFX_PLAYER_DEAD, SFX_PLAYER_JUMP, SFX_PLAYER_STEPS } from '../assets/audio';
+import { MUSIC_BG_NORMAL, MUSIC_BG_SLIDE, SFX_PICKUP_COIN, SFX_PLAYER_DEAD, SFX_PLAYER_JUMP, SFX_PLAYER_STEPS } from '../assets/audio';
 import { loadKenneyAssets } from '../assets/loadKenney';
 import {
   COIN_1,
@@ -236,6 +236,11 @@ export class GameScene extends Phaser.Scene {
     this.player.clearTint();
     this.setFishPowerCount(0);
     this.nextStepSfxTime = 0;
+
+    this.audioManager.startMusic(this, MUSIC_BG_NORMAL, { loop: true });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.audioManager.stopMusic();
+    });
   }
 
   update(time: number, delta: number) {
@@ -558,6 +563,7 @@ export class GameScene extends Phaser.Scene {
     this.setFishPowerCount(0);
     this.player.setTint(0x7ffcff);
     this.slideEmitter.start();
+    this.audioManager.startMusic(this, MUSIC_BG_SLIDE, { loop: true });
   }
 
   private updateSlideMax(time: number) {
@@ -579,6 +585,7 @@ export class GameScene extends Phaser.Scene {
     this.currentJumpVelocity = JUMP_VELOCITY;
     this.slideEmitter.stop();
     this.player.clearTint();
+    this.audioManager.startMusic(this, MUSIC_BG_NORMAL, { loop: true });
   }
 
   private updateStepSfx(isGrounded: boolean) {
