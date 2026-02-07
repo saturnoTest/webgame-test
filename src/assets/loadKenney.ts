@@ -42,6 +42,24 @@ import {
   UI_ROUND_FLAT,
   UI_ROUND_FLAT_PATH
 } from './kenney';
+import {
+  MUSIC_BG_NORMAL,
+  MUSIC_BG_NORMAL_PATH,
+  MUSIC_BG_SLIDE,
+  MUSIC_BG_SLIDE_PATH,
+  MUSIC_SPLASH_LOOP,
+  MUSIC_SPLASH_LOOP_PATH,
+  SFX_PICKUP_COIN,
+  SFX_PICKUP_COIN_PATH,
+  SFX_PLAYER_DEAD,
+  SFX_PLAYER_DEAD_PATH,
+  SFX_PLAYER_JUMP,
+  SFX_PLAYER_JUMP_PATH,
+  SFX_PLAYER_SLIDE,
+  SFX_PLAYER_SLIDE_PATH,
+  SFX_PLAYER_STEPS,
+  SFX_PLAYER_STEPS_PATH
+} from './audio';
 
 export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(KENNEY_BG_SOLID_SKY, KENNEY_BG_SOLID_SKY_PATH);
@@ -65,4 +83,13 @@ export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(TERRAIN_GRASS_BOTTOM, TERRAIN_GRASS_BOTTOM_PATH);
   scene.load.image(UI_RECTANGLE_GRADIENT, UI_RECTANGLE_GRADIENT_PATH);
   scene.load.image(UI_ROUND_FLAT, UI_ROUND_FLAT_PATH);
+
+  scene.load.audio(SFX_PLAYER_DEAD, SFX_PLAYER_DEAD_PATH);
+  scene.load.audio(SFX_PLAYER_JUMP, SFX_PLAYER_JUMP_PATH);
+  scene.load.audio(SFX_PLAYER_SLIDE, SFX_PLAYER_SLIDE_PATH);
+  scene.load.audio(SFX_PLAYER_STEPS, SFX_PLAYER_STEPS_PATH);
+  scene.load.audio(SFX_PICKUP_COIN, SFX_PICKUP_COIN_PATH);
+  scene.load.audio(MUSIC_BG_NORMAL, MUSIC_BG_NORMAL_PATH);
+  scene.load.audio(MUSIC_BG_SLIDE, MUSIC_BG_SLIDE_PATH);
+  scene.load.audio(MUSIC_SPLASH_LOOP, MUSIC_SPLASH_LOOP_PATH);
 };

@@ -71,6 +71,19 @@ public/assets/kenney/
 | `UI_RECTANGLE_GRADIENT` | `public/assets/kenney/UI/rectangle_gradient.png` | Barra de estado / contenedor UI |
 | `UI_ROUND_FLAT` | `public/assets/kenney/UI/round_flat.png` | Fondo de botón o icono |
 
+## Audio
+
+| Key | Archivo | Uso previsto |
+| --- | --- | --- |
+| `SFX_PLAYER_DEAD` | `public/assets/music-sounds/player/dead.ogg` | Sonido al perder o morir |
+| `SFX_PLAYER_JUMP` | `public/assets/music-sounds/player/jump.ogg` | Salto del jugador |
+| `SFX_PLAYER_SLIDE` | `public/assets/music-sounds/player/slide.mp3` | Deslizamiento del jugador |
+| `SFX_PLAYER_STEPS` | `public/assets/music-sounds/player/steps.mp3` | Pasos del jugador |
+| `SFX_PICKUP_COIN` | `public/assets/music-sounds/coin/coin.ogg` | Recolección de moneda |
+| `MUSIC_BG_NORMAL` | `public/assets/music-sounds/bg/normal-speed.wav` | Música de fondo a velocidad normal |
+| `MUSIC_BG_SLIDE` | `public/assets/music-sounds/bg/fast-speed-slide-power.mp3` | Música de fondo en modo rápido/deslizamiento |
+| `MUSIC_SPLASH_LOOP` | `public/assets/music-sounds/splash_screen/splash-music-loop.mp3` | Loop musical de la pantalla de inicio |
+
 ## Cómo cargar assets en Phaser
 
 ```ts
