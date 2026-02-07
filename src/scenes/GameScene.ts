@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 import { AudioManager } from '../audio/AudioManager';
 import { FISH_YELLOW_SWIM_ANIM, PLAYER_ANIM_IDLE, PLAYER_ANIM_JUMP, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
-import { MUSIC_BG_NORMAL, MUSIC_BG_SLIDE, SFX_PICKUP_COIN, SFX_PLAYER_DEAD, SFX_PLAYER_JUMP, SFX_PLAYER_STEPS } from '../assets/audio';
+import { MUSIC_BG_NORMAL, MUSIC_BG_SLIDE, SFX_PICKUP_COIN, SFX_PLAYER_DEAD, SFX_PLAYER_JUMP, SFX_PLAYER_SLIDE, SFX_PLAYER_STEPS } from '../assets/audio';
 import { loadKenneyAssets } from '../assets/loadKenney';
 import {
   COIN_1,
@@ -91,6 +91,7 @@ export class GameScene extends Phaser.Scene {
   private groundTopY = 0;
   private audioManager = new AudioManager();
   private nextStepSfxTime = 0;
+  private nextSlideSfxTime = 0;
 
   constructor() {
     super('game');
@@ -236,6 +237,7 @@ export class GameScene extends Phaser.Scene {
     this.player.clearTint();
     this.setFishPowerCount(0);
     this.nextStepSfxTime = 0;
+    this.nextSlideSfxTime = 0;
 
     this.audioManager.startMusic(this, MUSIC_BG_NORMAL, { loop: true });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -585,12 +587,27 @@ export class GameScene extends Phaser.Scene {
     this.currentJumpVelocity = JUMP_VELOCITY;
     this.slideEmitter.stop();
     this.player.clearTint();
+    this.nextSlideSfxTime = 0;
     this.audioManager.startMusic(this, MUSIC_BG_NORMAL, { loop: true });
   }
 
   private updateStepSfx(isGrounded: boolean) {
     const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
     const isMoving = Math.abs(playerBody.velocity.x) > 0.1;
+
+    if (this.slideActive) {
+      if (!isMoving) {
+        this.nextSlideSfxTime = 0;
+        return;
+      }
+      const now = this.time.now;
+      if (this.nextSlideSfxTime === 0 || now >= this.nextSlideSfxTime) {
+        this.audioManager.playSfx(this, SFX_PLAYER_SLIDE);
+        this.nextSlideSfxTime = now + Phaser.Math.Between(120, 180);
+      }
+      this.nextStepSfxTime = 0;
+      return;
+    }
 
     if (!isGrounded || !isMoving) {
       this.nextStepSfxTime = 0;
