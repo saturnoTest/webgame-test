@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 import { PLAYER_ANIM_IDLE, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
 import { loadKenneyAssets } from '../assets/loadKenney';
-import { KENNEY_BG_SOLID_SKY, PLAYER_IDLE } from '../assets/kenney';
+import { HAZARD_CRATE, KENNEY_BG_SOLID_SKY, PICKUP_TOKEN, PLAYER_IDLE } from '../assets/kenney';
 
 type SpawnType = 'obstacle' | 'coin';
 
@@ -38,8 +38,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.createTextures();
-
     this.add.image(0, 0, KENNEY_BG_SOLID_SKY).setOrigin(0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
 
     registerKenneyAnims(this);
@@ -144,10 +142,17 @@ export class GameScene extends Phaser.Scene {
     const y = -30;
 
     if (spawnType === 'coin') {
-      const coin = this.coins.create(x, y, 'coin') as Phaser.Physics.Arcade.Image;
+      const coin = this.coins.create(x, y, PICKUP_TOKEN) as Phaser.Physics.Arcade.Image;
+      const coinRadius = Math.min(coin.width, coin.height) * 0.25;
+      coin.setCircle(coinRadius);
+      coin.setOffset((coin.width - coinRadius * 2) / 2, (coin.height - coinRadius * 2) / 2);
       coin.setVelocityY(fallSpeed * 0.9);
     } else {
-      const obstacle = this.obstacles.create(x, y, 'obstacle') as Phaser.Physics.Arcade.Sprite;
+      const obstacle = this.obstacles.create(x, y, HAZARD_CRATE) as Phaser.Physics.Arcade.Sprite;
+      const obstacleBodyWidth = obstacle.width * 0.55;
+      const obstacleBodyHeight = obstacle.height * 0.65;
+      obstacle.setSize(obstacleBodyWidth, obstacleBodyHeight);
+      obstacle.setOffset((obstacle.width - obstacleBodyWidth) / 2, (obstacle.height - obstacleBodyHeight) / 2);
       obstacle.setVelocityY(fallSpeed);
     }
   }
@@ -189,18 +194,4 @@ export class GameScene extends Phaser.Scene {
     this.input.once('pointerdown', () => this.scene.restart());
   }
 
-  private createTextures() {
-    const graphics = this.add.graphics();
-
-    graphics.fillStyle(0xff4d6d, 1);
-    graphics.fillRoundedRect(0, 0, 38, 38, 8);
-    graphics.generateTexture('obstacle', 38, 38);
-
-    graphics.clear();
-    graphics.fillStyle(0xffd166, 1);
-    graphics.fillCircle(14, 14, 14);
-    graphics.generateTexture('coin', 28, 28);
-
-    graphics.destroy();
-  }
 }

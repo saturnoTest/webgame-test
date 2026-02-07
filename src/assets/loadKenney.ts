@@ -5,6 +5,10 @@ import {
   KENNEY_BG_COLOR_HILLS_PATH,
   KENNEY_BG_SOLID_SKY,
   KENNEY_BG_SOLID_SKY_PATH,
+  HAZARD_CRATE,
+  HAZARD_CRATE_PATH,
+  PICKUP_TOKEN,
+  PICKUP_TOKEN_PATH,
   PLAYER_HIT,
   PLAYER_HIT_PATH,
   PLAYER_IDLE,
@@ -23,4 +27,6 @@ export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(PLAYER_WALK_B, PLAYER_WALK_B_PATH);
   scene.load.image(PLAYER_IDLE, PLAYER_IDLE_PATH);
   scene.load.image(PLAYER_HIT, PLAYER_HIT_PATH);
+  scene.load.image(PICKUP_TOKEN, PICKUP_TOKEN_PATH);
+  scene.load.image(HAZARD_CRATE, HAZARD_CRATE_PATH);
 };
