@@ -10,7 +10,8 @@ import {
   KENNEY_BG_COLOR_DESERT,
   PLAYER_IDLE,
   TERRAIN_GRASS_BOTTOM,
-  TERRAIN_GRASS_TOP
+  TERRAIN_GRASS_TOP,
+  UI_RECTANGLE_GRADIENT
 } from '../assets/kenney';
 
 type SpawnType = 'obstacle' | 'coin';
@@ -27,6 +28,11 @@ const COIN_CHANCE = 0.22;
 const COIN_SCALE = 0.55;
 const CLOUD_SCROLL_SPEED = 0.006;
 const BASE_BG_COLOR = 0x9fd7ff;
+const HUD_HEIGHT = 52;
+const HUD_PADDING = 16;
+const HUD_DEPTH = 10;
+const HUD_TEXT_DEPTH = 12;
+const HUD_COIN_SCALE = 0.35;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -39,6 +45,10 @@ export class GameScene extends Phaser.Scene {
   private lastSpawnTime = 0;
   private scoreText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
+  private timeText!: Phaser.GameObjects.Text;
+  private coinIcon!: Phaser.GameObjects.Image;
+  private coinText!: Phaser.GameObjects.Text;
+  private hudBackground!: Phaser.GameObjects.Image;
   private coinsCollected = 0;
   private gameOver = false;
   private baseColor!: Phaser.GameObjects.Rectangle;
@@ -61,6 +71,7 @@ export class GameScene extends Phaser.Scene {
     this.resizeBackgrounds(width, height);
     this.scale.on(Phaser.Scale.Events.RESIZE, (gameSize: Phaser.Structs.Size) => {
       this.resizeBackgrounds(gameSize.width, gameSize.height);
+      this.resizeHud(gameSize.width);
     });
 
     registerKenneyAnims(this);
@@ -131,11 +142,7 @@ export class GameScene extends Phaser.Scene {
       this.moveDirection = 0;
     });
 
-    this.scoreText = this.add.text(24, 20, '', {
-      fontSize: '20px',
-      color: '#f6f7fb'
-    });
-    this.scoreText.setDepth(20);
+    this.createHud(width);
 
     this.statusText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
       fontSize: '28px',
@@ -255,7 +262,10 @@ export class GameScene extends Phaser.Scene {
   private updateScore(time: number) {
     const elapsedSeconds = Math.max(0, (time - this.startTime) / 1000);
     const scoreValue = Math.floor(elapsedSeconds * 10 + this.coinsCollected * 50);
-    this.scoreText.setText(`Score: ${scoreValue}  |  Tiempo: ${elapsedSeconds.toFixed(1)}s  |  Monedas: ${this.coinsCollected}`);
+    this.scoreText.setText(`Score: ${scoreValue}`);
+    this.timeText.setText(`Tiempo: ${elapsedSeconds.toFixed(1)}s`);
+    this.coinText.setText(`${this.coinsCollected}`);
+    this.layoutHud(this.scale.width);
   }
 
   private handleGameOver() {
@@ -279,6 +289,55 @@ export class GameScene extends Phaser.Scene {
     this.cloudLayer.setPosition(0, 0);
     this.cloudLayer.setSize(width, cloudHeight);
     this.cloudLayer.setDisplaySize(width, cloudHeight);
+  }
+
+  private createHud(viewportWidth: number) {
+    this.hudBackground = this.add.image(0, 0, UI_RECTANGLE_GRADIENT).setOrigin(0, 0);
+    this.hudBackground.setAlpha(0.85);
+    this.hudBackground.setDepth(HUD_DEPTH);
+    this.hudBackground.setDisplaySize(viewportWidth, HUD_HEIGHT);
+
+    const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '20px',
+      color: '#f6f7fb',
+      stroke: '#1d1e2c',
+      strokeThickness: 3
+    };
+
+    this.scoreText = this.add.text(0, 0, '', textStyle).setOrigin(0, 0.5);
+    this.scoreText.setDepth(HUD_TEXT_DEPTH);
+
+    this.timeText = this.add.text(0, 0, '', textStyle).setOrigin(0.5, 0.5);
+    this.timeText.setDepth(HUD_TEXT_DEPTH);
+
+    this.coinIcon = this.add.image(0, 0, COIN_1).setOrigin(0, 0.5);
+    this.coinIcon.setScale(HUD_COIN_SCALE);
+    this.coinIcon.setDepth(HUD_TEXT_DEPTH);
+
+    this.coinText = this.add.text(0, 0, '', textStyle).setOrigin(0, 0.5);
+    this.coinText.setDepth(HUD_TEXT_DEPTH);
+
+    this.resizeHud(viewportWidth);
+  }
+
+  private resizeHud(viewportWidth: number) {
+    this.hudBackground.setDisplaySize(viewportWidth, HUD_HEIGHT);
+    this.layoutHud(viewportWidth);
+  }
+
+  private layoutHud(viewportWidth: number) {
+    const centerY = HUD_HEIGHT / 2;
+    this.hudBackground.setPosition(0, 0);
+    this.scoreText.setPosition(HUD_PADDING, centerY);
+    this.timeText.setPosition(viewportWidth / 2, centerY);
+
+    const coinTextWidth = this.coinText.width;
+    const coinIconWidth = this.coinIcon.displayWidth;
+    const coinTextX = viewportWidth - HUD_PADDING - coinTextWidth;
+    const coinIconX = coinTextX - 8 - coinIconWidth;
+
+    this.coinIcon.setPosition(coinIconX, centerY);
+    this.coinText.setPosition(coinTextX, centerY);
   }
 
   private getCloudBandHeight(viewportHeight: number) {
