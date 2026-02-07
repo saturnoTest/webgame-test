@@ -104,6 +104,14 @@ export class GameScene extends Phaser.Scene {
     this.coins = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
 
     this.physics.add.collider(this.player, groundColliders);
+    this.physics.add.collider(this.coins, groundColliders, (coin) => {
+      const target = coin as Phaser.Physics.Arcade.Image;
+      target.destroy();
+    });
+    this.physics.add.collider(this.obstacles, groundColliders, (obstacle) => {
+      const target = obstacle as Phaser.Physics.Arcade.Sprite;
+      target.destroy();
+    });
     this.physics.add.collider(this.player, this.obstacles, () => this.handleGameOver());
     this.physics.add.overlap(this.player, this.coins, (_player, coin) => {
       const target = coin as Phaser.Physics.Arcade.Image;
