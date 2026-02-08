@@ -49,6 +49,7 @@ const HUD_BASE_FISH_SCALE = 0.5;
 const HUD_BASE_FISH_GAP = 9;
 const HUD_BASE_GROUP_GAP = 18;
 const HUD_MAX_SCALE = 1.35;
+const HUD_SOLID_BLUE = 0x1f5fd6;
 const GAME_OVER_OVERLAY_ALPHA = 0.55;
 const GAME_OVER_PANEL_MAX_WIDTH = 0.78;
 const GAME_OVER_PANEL_MAX_HEIGHT = 0.6;
@@ -71,6 +72,7 @@ const FISH_MAX_HEIGHT = 160;
 const FISH_MAX_POWER = 4;
 const FISH_PULSE_MULTIPLIER = 1.1;
 const FISH_PULSE_DURATION = 220;
+const GROUND_VISUAL_DROP_RATIO = 0.45;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -166,7 +168,8 @@ export class GameScene extends Phaser.Scene {
     const groundTopHeight = groundTopSource?.height ?? 32;
     const groundBottomHeight = groundBottomSource?.height ?? 32;
     const groundInset = Math.floor(groundBottomHeight * 0.35);
-    const groundBottomY = height - groundBottomHeight + groundInset;
+    const groundVisualDrop = Math.round(groundBottomHeight * GROUND_VISUAL_DROP_RATIO);
+    const groundBottomY = height - groundBottomHeight + groundInset + groundVisualDrop;
     const groundTopY = groundBottomY - groundTopHeight;
     this.groundTopY = groundTopY;
     const tilesAcross = Math.ceil(GAME_WIDTH / groundTileWidth) + 1;
@@ -736,7 +739,8 @@ export class GameScene extends Phaser.Scene {
 
   private createHud(viewportWidth: number, viewportHeight: number) {
     this.hudBackground = this.add.image(0, 0, UI_RECTANGLE_GRADIENT).setOrigin(0, 0);
-    this.hudBackground.setAlpha(0.88);
+    this.hudBackground.setTintFill(HUD_SOLID_BLUE);
+    this.hudBackground.setAlpha(1);
     this.hudBackground.setDepth(HUD_DEPTH);
     this.hudBackground.setDisplaySize(viewportWidth, HUD_BASE_HEIGHT);
     this.hudFrame = this.add.image(0, 0, UI_RECTANGLE_DEPTH_LINE).setOrigin(0, 0);
