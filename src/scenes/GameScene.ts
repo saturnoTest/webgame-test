@@ -84,6 +84,8 @@ const MOBILE_JUMP_DOUBLE_TAP_WINDOW_MS = 260;
 const MOBILE_CONTROL_MARGIN = 24;
 const MOBILE_JUMP_BUTTON_DEPTH = 20;
 const MOBILE_JOYSTICK_DEPTH = 18;
+const CAMERA_LERP = 0.1;
+const CAMERA_OFFSET_RATIO = 0.12;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -178,8 +180,11 @@ export class GameScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
     this.baseColor = this.add.rectangle(0, 0, width, height, BASE_BG_COLOR).setOrigin(0).setDepth(-30);
+    this.baseColor.setScrollFactor(0);
     this.desertBackground = this.add.image(0, 0, KENNEY_BG_COLOR_DESERT).setOrigin(0).setDepth(-20);
+    this.desertBackground.setScrollFactor(0);
     this.cloudLayer = this.add.tileSprite(0, 0, width, height, KENNEY_BG_CLOUDS).setOrigin(0).setDepth(-10);
+    this.cloudLayer.setScrollFactor(0);
     this.resizeBackgrounds(width, height);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
@@ -209,6 +214,15 @@ export class GameScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.player.setGravityY(900);
     this.player.anims.play(PLAYER_ANIM_IDLE);
+
+    const worldWidth = GAME_WIDTH;
+    const worldHeight = GAME_HEIGHT;
+    this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+    this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+    const followOffsetX = 0;
+    const followOffsetY = Math.round(-height * CAMERA_OFFSET_RATIO);
+    this.cameras.main.startFollow(this.player, true, CAMERA_LERP, CAMERA_LERP);
+    this.cameras.main.setFollowOffset(followOffsetX, followOffsetY);
 
     this.slideEmitter = this.add.particles(0, 0, UI_ROUND_FLAT, {
       emitting: false,
@@ -293,6 +307,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.statusText.setOrigin(0.5);
     this.statusText.setDepth(20);
+    this.statusText.setScrollFactor(0);
 
     this.startTime = this.time.now;
     this.lastSpawnTime = this.time.now;
@@ -772,10 +787,12 @@ export class GameScene extends Phaser.Scene {
     this.hudBackground.setAlpha(1);
     this.hudBackground.setDepth(HUD_DEPTH);
     this.hudBackground.setDisplaySize(viewportWidth, HUD_BASE_HEIGHT);
+    this.hudBackground.setScrollFactor(0);
     this.hudInnerPanel = this.add.image(0, 0, UI_RECTANGLE_GRADIENT_2).setOrigin(0.5, 0.5);
     this.hudInnerPanel.setAlpha(1);
     this.hudInnerPanel.setDepth(HUD_DEPTH + 1);
     this.hudInnerPanel.setDisplaySize(viewportWidth, HUD_BASE_HEIGHT);
+    this.hudInnerPanel.setScrollFactor(0);
 
     const scoreStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontSize: `${HUD_BASE_SCORE_FONT_SIZE}px`,
@@ -804,35 +821,44 @@ export class GameScene extends Phaser.Scene {
     this.scoreText = this.add.text(0, 0, '', scoreStyle).setOrigin(0, 0.5);
     this.scoreText.setDepth(HUD_TEXT_DEPTH);
     this.scoreText.setShadow(0, 2, '#0b0b0b', 2, true, true);
+    this.scoreText.setScrollFactor(0);
 
     this.timeText = this.add.text(0, 0, '', timeStyle).setOrigin(0.5, 0.5);
     this.timeText.setDepth(HUD_TEXT_DEPTH);
     this.timeText.setShadow(0, 2, '#0b0b0b', 2, true, true);
+    this.timeText.setScrollFactor(0);
 
     this.coinIcon = this.add.image(0, 0, COIN_1).setOrigin(0, 0.5);
     this.coinIcon.setScale(HUD_BASE_COIN_SCALE);
     this.coinIcon.setDepth(HUD_TEXT_DEPTH);
+    this.coinIcon.setScrollFactor(0);
 
     this.coinText = this.add.text(0, 0, '', statStyle).setOrigin(0, 0.5);
     this.coinText.setDepth(HUD_TEXT_DEPTH);
     this.coinText.setShadow(0, 2, '#0b0b0b', 2, true, true);
+    this.coinText.setScrollFactor(0);
 
     this.coinGroup = this.add.container(0, 0, [this.coinIcon, this.coinText]);
     this.coinGroup.setDepth(HUD_TEXT_DEPTH);
+    this.coinGroup.setScrollFactor(0);
 
     this.fishIcon = this.add.image(0, 0, FISH_YELLOW_REST).setOrigin(0, 0.5);
     this.fishIcon.setScale(HUD_BASE_FISH_SCALE);
     this.fishIcon.setDepth(HUD_TEXT_DEPTH);
+    this.fishIcon.setScrollFactor(0);
 
     this.fishOverlay = this.add.rectangle(0, 0, 1, 1, 0x0b0b0b, 0.65).setOrigin(0, 0);
     this.fishOverlay.setDepth(HUD_TEXT_DEPTH + 1);
+    this.fishOverlay.setScrollFactor(0);
 
     this.fishText = this.add.text(0, 0, '0/4', statStyle).setOrigin(0, 0.5);
     this.fishText.setDepth(HUD_TEXT_DEPTH);
     this.fishText.setShadow(0, 2, '#0b0b0b', 2, true, true);
+    this.fishText.setScrollFactor(0);
 
     this.fishGroup = this.add.container(0, 0, [this.fishIcon, this.fishOverlay, this.fishText]);
     this.fishGroup.setDepth(HUD_TEXT_DEPTH);
+    this.fishGroup.setScrollFactor(0);
 
     this.setFishPowerProgress(0);
     this.stopFishPulse();

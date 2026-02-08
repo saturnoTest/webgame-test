@@ -1,38 +1,73 @@
 # One-Tap Dodge (MVP)
 
-Juego web casual donde el jugador esquiva objetos con un solo toque. Preparado para navegador/PWA con Vite + TypeScript + Phaser.
+Juego web casual en el que esquivas obstáculos con un solo gesto, con monedas y power-ups que activan un "slide max" de alta velocidad.
 
-## Requisitos
-- Node.js 18+
-- npm 9+
+## Gameplay / Cómo jugar
 
-## Instalación
+**Desktop**
+- Moverse: **←/→** o **A/D**.
+- Saltar: **Space**.
+- Slide max: **doble tap** de izquierda o derecha cuando el medidor de fish esté completo.
+
+**Mobile**
+- Moverse: **joystick** en pantalla.
+- Saltar: **botón Jump**.
+- Slide max: **doble tap** en Jump cuando el medidor de fish esté completo.
+
+## Features principales
+- Obstáculos que caen con velocidad creciente y spawn dinámico.
+- Monedas coleccionables y marcador de tiempo/puntaje.
+- Power-up de fish que habilita el **slide max** con velocidad extra.
+- HUD responsivo con contadores de score, tiempo, monedas y fish.
+
+## Tech stack
+- **Phaser 3**
+- **TypeScript** (modo strict)
+- **Vite**
+
+Escenas principales: `SplashScene` y `GameScene` en `src/scenes/`.
+
+## Estructura de assets (resumen)
+- `public/assets/kenney/` (sprites, UI, tiles y `License.txt` de Kenney)
+- `public/assets/music-sounds/` (música y SFX por categoría)
+- `public/assets/splash/` (splash screen)
+
+## Cómo correrlo local
+
 ```bash
 npm install
 ```
 
-## Desarrollo
 ```bash
 npm run dev
 ```
 
-## Build
+```bash
+npm run dev-net
+```
+
 ```bash
 npm run build
 ```
 
-## Preview
 ```bash
 npm run preview
 ```
 
-## Assets (Kenney)
-Este MVP usa formas generadas por código para no bloquear el arranque. Sustituir por sprites de Kenney cuando estén disponibles:
-- Descarga un pack 2D de Kenney (ej. "Platformer" o "Topdown")
-- Copia los assets en `public/assets/kenney/`
-- Actualiza `src/scenes/GameScene.ts` para cargar las texturas reales.
+```bash
+npm run typecheck
+```
 
-## Validación (comandos)
-- Install: `npm install`
-- Dev: `npm run dev`
-- Build: `npm run build`
+## Metodología / Gobernanza (IA + PRs humanos)
+- **Repo org**: MVPFlow.
+- **IA/bot**: saturnoTest (crea PRs).
+- **Humano**: theghost1980 (aprueba).
+- **Governance**: CODEOWNERS + branch protection (PR requerido, 1 approval mínimo, status checks obligatorios).
+- **Regla “Index first”** para assets: primero index/loader/docs, luego uso en gameplay.
+- **No commitear binarios desde Codex** (solo integración por humanos).
+
+## Créditos
+- Assets de **Kenney**: https://kenney.nl/ (ver `public/assets/kenney/License.txt`).
+
+## License
+- Por definir. Agregar un archivo de licencia en la raíz cuando el proyecto se publique formalmente.
