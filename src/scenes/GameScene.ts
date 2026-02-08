@@ -80,7 +80,11 @@ const MOBILE_JOYSTICK_THUMB_SIZE = 70;
 const MOBILE_JOYSTICK_RADIUS = 48;
 const MOBILE_JOYSTICK_DEADZONE = 0.15;
 const MOBILE_JUMP_BUTTON_SIZE = 120;
-const MOBILE_JUMP_DOUBLE_TAP_WINDOW_MS = 260;
+const MOBILE_JUMP_BUTTON_ALPHA = 0.55;
+const MOBILE_JUMP_BUTTON_PRESSED_ALPHA = 0.7;
+const MOBILE_JUMP_LONG_PRESS_MS = 420;
+const MOBILE_JUMP_PULSE_SCALE = 1.08;
+const MOBILE_JUMP_PULSE_DURATION_MS = 140;
 const MOBILE_CONTROL_MARGIN = 24;
 const MOBILE_JUMP_BUTTON_DEPTH = 20;
 const MOBILE_JOYSTICK_DEPTH = 18;
@@ -136,7 +140,10 @@ export class GameScene extends Phaser.Scene {
   private currentJumpVelocity = JUMP_VELOCITY;
   private lastLeftTapTime = 0;
   private lastRightTapTime = 0;
-  private lastJumpTapTime = 0;
+  private jumpPressStartTime = 0;
+  private jumpLongPressTriggered = false;
+  private jumpLongPressTimeout?: Phaser.Time.TimerEvent;
+  private jumpPointerId?: number;
   private slideEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private baseColor!: Phaser.GameObjects.Rectangle;
   private desertBackground!: Phaser.GameObjects.Image;
@@ -320,7 +327,10 @@ export class GameScene extends Phaser.Scene {
     this.currentJumpVelocity = JUMP_VELOCITY;
     this.lastLeftTapTime = 0;
     this.lastRightTapTime = 0;
-    this.lastJumpTapTime = 0;
+    this.jumpPressStartTime = 0;
+    this.jumpLongPressTriggered = false;
+    this.jumpPointerId = undefined;
+    this.clearJumpLongPressTimer();
     this.slideEmitter.stop();
     this.player.clearTint();
     this.setFishPowerCount(0);
@@ -1012,7 +1022,8 @@ export class GameScene extends Phaser.Scene {
     this.jumpButtonHitbox = undefined;
 
     this.mobileControlsEnabled = false;
-    this.lastJumpTapTime = 0;
+    this.resetJumpLongPressState();
+    this.clearJumpLongPressTimer();
   }
 
   private createMobileControls(viewportWidth: number, viewportHeight: number) {
@@ -1058,7 +1069,7 @@ export class GameScene extends Phaser.Scene {
       align: 'center'
     };
     this.jumpButtonImage = this.add.image(0, 0, UI_ROUND_FLAT).setOrigin(0.5);
-    this.jumpButtonImage.setAlpha(0.55);
+    this.jumpButtonImage.setAlpha(MOBILE_JUMP_BUTTON_ALPHA);
     this.jumpButtonText = this.add.text(0, 0, 'JUMP', jumpStyle).setOrigin(0.5);
     this.jumpButtonHitbox = this.add.rectangle(0, 0, 1, 1, 0x000000, 0);
     this.jumpButtonHitbox.setOrigin(0.5);
@@ -1067,21 +1078,48 @@ export class GameScene extends Phaser.Scene {
     this.jumpButton.setDepth(MOBILE_JUMP_BUTTON_DEPTH);
     this.jumpButton.setScrollFactor(0);
 
-    this.jumpButtonHitbox.on('pointerdown', () => {
+    this.jumpButtonHitbox.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.gameOver) {
         return;
       }
-      this.jumpButton?.setScale(0.96);
-      this.jumpButtonImage?.setTint(0xdfe8ff);
-      this.handleJumpButtonTap();
+      this.jumpPointerId = pointer.id;
+      this.jumpPressStartTime = this.time.now;
+      this.jumpLongPressTriggered = false;
+      this.setJumpButtonPressedVisual();
+      if (this.fishPowerCount === FISH_MAX_POWER && !this.slideActive) {
+        this.jumpLongPressTimeout = this.time.delayedCall(MOBILE_JUMP_LONG_PRESS_MS, () => {
+          this.jumpLongPressTimeout = undefined;
+          const pressDuration = this.time.now - this.jumpPressStartTime;
+          if (pressDuration < MOBILE_JUMP_LONG_PRESS_MS) {
+            return;
+          }
+          if (this.slideActive || this.fishPowerCount < FISH_MAX_POWER) {
+            return;
+          }
+          this.jumpLongPressTriggered = true;
+          this.playJumpButtonPulse();
+          this.activateSlideMax();
+        });
+      }
     });
-    this.jumpButtonHitbox.on('pointerup', () => {
-      this.jumpButton?.setScale(1);
-      this.jumpButtonImage?.clearTint();
+    this.jumpButtonHitbox.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (this.jumpPointerId !== undefined && this.jumpPointerId !== pointer.id) {
+        return;
+      }
+      this.clearJumpLongPressTimer();
+      if (!this.jumpLongPressTriggered) {
+        this.handleJumpButtonTap();
+      }
+      this.resetJumpButtonVisual();
+      this.resetJumpLongPressState();
     });
-    this.jumpButtonHitbox.on('pointerout', () => {
-      this.jumpButton?.setScale(1);
-      this.jumpButtonImage?.clearTint();
+    this.jumpButtonHitbox.on('pointerout', (pointer: Phaser.Input.Pointer) => {
+      if (this.jumpPointerId !== undefined && this.jumpPointerId !== pointer.id) {
+        return;
+      }
+      this.clearJumpLongPressTimer();
+      this.resetJumpButtonVisual();
+      this.resetJumpLongPressState();
     });
 
     this.layoutMobileControls(viewportWidth, viewportHeight);
@@ -1133,22 +1171,51 @@ export class GameScene extends Phaser.Scene {
     this.joystickThumb?.setPosition(0, 0);
   }
 
-  private handleJumpButtonTap() {
-    const now = this.time.now;
-    const isDoubleTap =
-      this.lastJumpTapTime > 0 && now - this.lastJumpTapTime <= MOBILE_JUMP_DOUBLE_TAP_WINDOW_MS;
+  private setJumpButtonPressedVisual() {
+    this.jumpButton?.setScale(0.96);
+    this.jumpButtonImage?.setTint(0xdfe8ff);
+    this.jumpButtonImage?.setAlpha(MOBILE_JUMP_BUTTON_PRESSED_ALPHA);
+  }
 
-    if (isDoubleTap && this.fishPowerCount === FISH_MAX_POWER && !this.slideActive) {
-      this.lastJumpTapTime = 0;
-      this.activateSlideMax();
+  private resetJumpButtonVisual() {
+    this.jumpButton?.setScale(1);
+    this.jumpButtonImage?.clearTint();
+    this.jumpButtonImage?.setAlpha(MOBILE_JUMP_BUTTON_ALPHA);
+  }
+
+  private playJumpButtonPulse() {
+    if (!this.jumpButton || !this.jumpButtonImage) {
       return;
     }
+    this.jumpButtonImage.setTint(0x7ffcff);
+    this.jumpButtonImage.setAlpha(0.9);
+    this.tweens.add({
+      targets: this.jumpButton,
+      scale: MOBILE_JUMP_PULSE_SCALE,
+      duration: MOBILE_JUMP_PULSE_DURATION_MS,
+      yoyo: true,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.resetJumpButtonVisual();
+      }
+    });
+  }
 
-    if (this.lastJumpTapTime > 0 && now - this.lastJumpTapTime > MOBILE_JUMP_DOUBLE_TAP_WINDOW_MS) {
-      this.lastJumpTapTime = 0;
+  private clearJumpLongPressTimer() {
+    if (!this.jumpLongPressTimeout) {
+      return;
     }
+    this.jumpLongPressTimeout.remove(false);
+    this.jumpLongPressTimeout = undefined;
+  }
 
-    this.lastJumpTapTime = now;
+  private resetJumpLongPressState() {
+    this.jumpPointerId = undefined;
+    this.jumpPressStartTime = 0;
+    this.jumpLongPressTriggered = false;
+  }
+
+  private handleJumpButtonTap() {
     this.tryJump();
   }
 
