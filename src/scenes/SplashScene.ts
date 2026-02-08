@@ -9,12 +9,13 @@ const PROMPT_TEXT = 'Press any to play';
 const PROMPT_MARGIN = 64;
 const PROMPT_PADDING_X = 28;
 const PROMPT_PADDING_Y = 16;
-const OVERLAY_ALPHA = 0.54;
+const OVERLAY_ALPHA = 0.62;
+const OVERLAY_RADIUS = 14;
 
 export class SplashScene extends Phaser.Scene {
   private audioManager = new AudioManager();
   private promptText!: Phaser.GameObjects.Text;
-  private promptOverlay!: Phaser.GameObjects.Rectangle;
+  private promptOverlay!: Phaser.GameObjects.Graphics;
   private backgroundImage!: Phaser.GameObjects.Image;
   private startTriggered = false;
   private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
@@ -37,21 +38,19 @@ export class SplashScene extends Phaser.Scene {
     this.backgroundImage.setOrigin(0.5, 0.5);
     this.scaleBackground(width, height);
 
-    this.promptOverlay = this.add.rectangle(0, 0, 10, 10, 0x081018, OVERLAY_ALPHA);
-    this.promptOverlay.setOrigin(0.5);
+    this.promptOverlay = this.add.graphics();
     this.promptOverlay.setDepth(1);
 
     this.promptText = this.add.text(0, 0, PROMPT_TEXT, {
       fontSize: '28px',
       color: '#ffffff',
+      fontStyle: 'bold',
       align: 'center',
-      stroke: '#03050a',
-      strokeThickness: 6,
       shadow: {
         offsetX: 0,
         offsetY: 3,
-        color: '#03050a',
-        blur: 4,
+        color: '#000000',
+        blur: 6,
         fill: true
       }
     });
@@ -146,7 +145,12 @@ export class SplashScene extends Phaser.Scene {
     const bounds = this.promptText.getBounds();
     const overlayWidth = Math.min(viewportWidth - PROMPT_PADDING_X * 2, bounds.width + PROMPT_PADDING_X * 2);
     const overlayHeight = bounds.height + PROMPT_PADDING_Y * 2;
-    this.promptOverlay.setDisplaySize(Math.max(0, overlayWidth), Math.max(0, overlayHeight));
-    this.promptOverlay.setPosition(viewportWidth / 2, promptY);
+    const clampedOverlayWidth = Math.max(0, overlayWidth);
+    const clampedOverlayHeight = Math.max(0, overlayHeight);
+    const overlayX = viewportWidth / 2 - clampedOverlayWidth / 2;
+    const overlayY = promptY - clampedOverlayHeight / 2;
+    this.promptOverlay.clear();
+    this.promptOverlay.fillStyle(0x000000, OVERLAY_ALPHA);
+    this.promptOverlay.fillRoundedRect(overlayX, overlayY, clampedOverlayWidth, clampedOverlayHeight, OVERLAY_RADIUS);
   }
 }
