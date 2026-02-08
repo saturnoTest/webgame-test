@@ -79,9 +79,8 @@ const MOBILE_JOYSTICK_BASE_SIZE = 140;
 const MOBILE_JOYSTICK_THUMB_SIZE = 70;
 const MOBILE_JOYSTICK_RADIUS = 48;
 const MOBILE_JOYSTICK_DEADZONE = 0.15;
-const MOBILE_SLIDE_TRIGGER_DEADZONE = 0.35;
-const MOBILE_SLIDE_STABLE_MS = 120;
 const MOBILE_JUMP_BUTTON_SIZE = 120;
+const MOBILE_JUMP_DOUBLE_TAP_WINDOW_MS = 260;
 const MOBILE_CONTROL_MARGIN = 24;
 const MOBILE_JUMP_BUTTON_DEPTH = 20;
 const MOBILE_JOYSTICK_DEPTH = 18;
@@ -94,8 +93,6 @@ export class GameScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
   private moveDirection = 0;
-  private joystickStrength = 0;
-  private lastMoveDirectionChangeTime = 0;
   private startTime = 0;
   private lastSpawnTime = 0;
   private lastFishSpawnTime = 0;
@@ -137,6 +134,7 @@ export class GameScene extends Phaser.Scene {
   private currentJumpVelocity = JUMP_VELOCITY;
   private lastLeftTapTime = 0;
   private lastRightTapTime = 0;
+  private lastJumpTapTime = 0;
   private slideEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private baseColor!: Phaser.GameObjects.Rectangle;
   private desertBackground!: Phaser.GameObjects.Image;
@@ -268,7 +266,7 @@ export class GameScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
 
-    const enableMobileControls = this.shouldUseMobileControls(width);
+    const enableMobileControls = this.shouldUseMobileControls();
 
     this.keyDownHandler = (event: KeyboardEvent) => {
       if (event.repeat) {
@@ -284,6 +282,8 @@ export class GameScene extends Phaser.Scene {
     this.createHud(width, height);
     if (enableMobileControls) {
       this.createMobileControls(width, height);
+    } else {
+      this.destroyMobileControls();
     }
 
     this.statusText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
@@ -305,6 +305,7 @@ export class GameScene extends Phaser.Scene {
     this.currentJumpVelocity = JUMP_VELOCITY;
     this.lastLeftTapTime = 0;
     this.lastRightTapTime = 0;
+    this.lastJumpTapTime = 0;
     this.slideEmitter.stop();
     this.player.clearTint();
     this.setFishPowerCount(0);
@@ -741,6 +742,18 @@ export class GameScene extends Phaser.Scene {
     this.resizeBackgrounds(gameSize.width, gameSize.height);
     this.resizeHud(gameSize.width, gameSize.height);
     this.layoutGameOverModal(gameSize.width, gameSize.height);
+
+    const shouldEnableMobileControls = this.shouldUseMobileControls();
+    if (!shouldEnableMobileControls) {
+      this.destroyMobileControls();
+      return;
+    }
+
+    if (!this.mobileControlsEnabled) {
+      this.createMobileControls(gameSize.width, gameSize.height);
+      return;
+    }
+
     this.layoutMobileControls(gameSize.width, gameSize.height);
   }
 
@@ -940,9 +953,40 @@ export class GameScene extends Phaser.Scene {
     this.fishGroup?.setScale(1);
   }
 
-  private shouldUseMobileControls(viewportWidth: number) {
-    const useTouchControls = this.sys.game.device.input.touch === true || viewportWidth < 700;
-    return useTouchControls;
+  private shouldUseMobileControls() {
+    const isTouchDevice = this.sys.game.device.input.touch === true;
+    const pointer = this.input.manager?.pointers?.[0];
+    const pointerType = pointer && 'pointerType' in pointer ? (pointer as { pointerType?: string }).pointerType : undefined;
+    const isTouchPointer = pointerType ? pointerType === 'touch' : true;
+    return isTouchDevice && isTouchPointer;
+  }
+
+  private destroyMobileControls() {
+    if (!this.mobileControlsEnabled) {
+      return;
+    }
+
+    if (this.joystickMoveHandler) {
+      this.input.off('pointermove', this.joystickMoveHandler);
+    }
+    if (this.joystickUpHandler) {
+      this.input.off('pointerup', this.joystickUpHandler);
+    }
+
+    this.joystickContainer?.destroy(true);
+    this.joystickContainer = undefined;
+    this.joystickBase = undefined;
+    this.joystickThumb = undefined;
+    this.joystickPointerId = undefined;
+
+    this.jumpButton?.destroy(true);
+    this.jumpButton = undefined;
+    this.jumpButtonImage = undefined;
+    this.jumpButtonText = undefined;
+    this.jumpButtonHitbox = undefined;
+
+    this.mobileControlsEnabled = false;
+    this.lastJumpTapTime = 0;
   }
 
   private createMobileControls(viewportWidth: number, viewportHeight: number) {
@@ -1003,7 +1047,7 @@ export class GameScene extends Phaser.Scene {
       }
       this.jumpButton?.setScale(0.96);
       this.jumpButtonImage?.setTint(0xdfe8ff);
-      this.tryJump({ fromTouch: true });
+      this.handleJumpButtonTap();
     });
     this.jumpButtonHitbox.on('pointerup', () => {
       this.jumpButton?.setScale(1);
@@ -1053,10 +1097,6 @@ export class GameScene extends Phaser.Scene {
     const clampedX = Phaser.Math.Clamp(deltaX, -this.joystickRadius, this.joystickRadius);
     const normalizedX = this.joystickRadius > 0 ? clampedX / this.joystickRadius : 0;
     const nextDirection = Math.abs(normalizedX) < MOBILE_JOYSTICK_DEADZONE ? 0 : normalizedX < 0 ? -1 : 1;
-    if (nextDirection !== this.moveDirection) {
-      this.lastMoveDirectionChangeTime = this.time.now;
-    }
-    this.joystickStrength = normalizedX;
     this.joystickThumb.setPosition(clampedX, 0);
     this.moveDirection = nextDirection;
   }
@@ -1064,37 +1104,36 @@ export class GameScene extends Phaser.Scene {
   private resetJoystick() {
     this.joystickPointerId = undefined;
     this.moveDirection = 0;
-    this.joystickStrength = 0;
     this.joystickThumb?.setPosition(0, 0);
   }
 
-  private tryJump(options: { fromTouch?: boolean } = {}) {
+  private handleJumpButtonTap() {
+    const now = this.time.now;
+    const isDoubleTap =
+      this.lastJumpTapTime > 0 && now - this.lastJumpTapTime <= MOBILE_JUMP_DOUBLE_TAP_WINDOW_MS;
+
+    if (isDoubleTap && this.fishPowerCount === FISH_MAX_POWER && !this.slideActive) {
+      this.lastJumpTapTime = 0;
+      this.activateSlideMax();
+      return;
+    }
+
+    if (this.lastJumpTapTime > 0 && now - this.lastJumpTapTime > MOBILE_JUMP_DOUBLE_TAP_WINDOW_MS) {
+      this.lastJumpTapTime = 0;
+    }
+
+    this.lastJumpTapTime = now;
+    this.tryJump();
+  }
+
+  private tryJump() {
     const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
     const isGrounded = playerBody.blocked.down || playerBody.touching.down;
     if (!isGrounded) {
       return;
     }
-    if (options.fromTouch && this.shouldTriggerTouchSlideMax()) {
-      this.activateSlideMax();
-    }
     this.player.setVelocityY(this.currentJumpVelocity);
     this.audioManager.playSfx(this, SFX_PLAYER_JUMP);
-  }
-
-  private shouldTriggerTouchSlideMax() {
-    if (!this.mobileControlsEnabled) {
-      return false;
-    }
-    if (this.slideActive) {
-      return false;
-    }
-    if (this.fishPowerCount < FISH_MAX_POWER) {
-      return false;
-    }
-    const hasStrongDirection = Math.abs(this.joystickStrength) >= MOBILE_SLIDE_TRIGGER_DEADZONE;
-    const hasStableDirection =
-      Math.abs(this.moveDirection) === 1 && this.time.now - this.lastMoveDirectionChangeTime >= MOBILE_SLIDE_STABLE_MS;
-    return hasStrongDirection || hasStableDirection;
   }
 
   private handleDoubleTap(event: KeyboardEvent) {
