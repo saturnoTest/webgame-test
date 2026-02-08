@@ -17,6 +17,7 @@ import {
   TERRAIN_GRASS_TOP,
   UI_BUTTON_SQUARE_BORDER,
   UI_RECTANGLE_GRADIENT,
+  UI_RECTANGLE_GRADIENT_2,
   UI_RECTANGLE_DEPTH_LINE,
   UI_ROUND_FLAT
 } from '../assets/kenney';
@@ -37,6 +38,8 @@ const CLOUD_SCROLL_SPEED = 0.006;
 const BASE_BG_COLOR = 0x9fd7ff;
 const HUD_BASE_HEIGHT = 76;
 const HUD_BASE_PADDING = 20;
+const HUD_BASE_OUTER_PADDING = 12;
+const HUD_BASE_INNER_MARGIN = 8;
 const HUD_BASE_CONTENT_OFFSET_Y = 0;
 const HUD_DEPTH = 10;
 const HUD_TEXT_DEPTH = 12;
@@ -49,7 +52,6 @@ const HUD_BASE_FISH_SCALE = 0.5;
 const HUD_BASE_FISH_GAP = 9;
 const HUD_BASE_GROUP_GAP = 18;
 const HUD_MAX_SCALE = 1.35;
-const HUD_SOLID_BLUE = 0x1f5fd6;
 const GAME_OVER_OVERLAY_ALPHA = 0.55;
 const GAME_OVER_PANEL_MAX_WIDTH = 0.78;
 const GAME_OVER_PANEL_MAX_HEIGHT = 0.6;
@@ -99,10 +101,12 @@ export class GameScene extends Phaser.Scene {
   private fishPowerCount = 0;
   private fishPulseTween?: Phaser.Tweens.Tween;
   private hudBackground!: Phaser.GameObjects.Image;
-  private hudFrame!: Phaser.GameObjects.Image;
+  private hudInnerPanel!: Phaser.GameObjects.Image;
   private uiScale = 1;
   private hudHeight = HUD_BASE_HEIGHT;
   private hudPadding = HUD_BASE_PADDING;
+  private hudOuterPadding = HUD_BASE_OUTER_PADDING;
+  private hudInnerMargin = HUD_BASE_INNER_MARGIN;
   private hudContentOffsetY = HUD_BASE_CONTENT_OFFSET_Y;
   private hudScoreFontSize = HUD_BASE_SCORE_FONT_SIZE;
   private hudTimeFontSize = HUD_BASE_TIME_FONT_SIZE;
@@ -739,14 +743,13 @@ export class GameScene extends Phaser.Scene {
 
   private createHud(viewportWidth: number, viewportHeight: number) {
     this.hudBackground = this.add.image(0, 0, UI_RECTANGLE_GRADIENT).setOrigin(0, 0);
-    this.hudBackground.setTintFill(HUD_SOLID_BLUE);
     this.hudBackground.setAlpha(1);
     this.hudBackground.setDepth(HUD_DEPTH);
     this.hudBackground.setDisplaySize(viewportWidth, HUD_BASE_HEIGHT);
-    this.hudFrame = this.add.image(0, 0, UI_RECTANGLE_DEPTH_LINE).setOrigin(0, 0);
-    this.hudFrame.setAlpha(0.9);
-    this.hudFrame.setDepth(HUD_DEPTH + 1);
-    this.hudFrame.setDisplaySize(viewportWidth, HUD_BASE_HEIGHT);
+    this.hudInnerPanel = this.add.image(0, 0, UI_RECTANGLE_GRADIENT_2).setOrigin(0.5, 0.5);
+    this.hudInnerPanel.setAlpha(1);
+    this.hudInnerPanel.setDepth(HUD_DEPTH + 1);
+    this.hudInnerPanel.setDisplaySize(viewportWidth, HUD_BASE_HEIGHT);
 
     const scoreStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontSize: `${HUD_BASE_SCORE_FONT_SIZE}px`,
@@ -812,8 +815,11 @@ export class GameScene extends Phaser.Scene {
 
   private resizeHud(viewportWidth: number, viewportHeight: number) {
     this.applyHudScale(viewportWidth, viewportHeight);
-    this.hudBackground.setDisplaySize(viewportWidth, this.hudHeight);
-    this.hudFrame.setDisplaySize(viewportWidth, this.hudHeight);
+    const baseWidth = Math.max(0, viewportWidth - this.hudOuterPadding * 2);
+    this.hudBackground.setDisplaySize(baseWidth, this.hudHeight);
+    const innerWidth = Math.max(0, baseWidth - this.hudInnerMargin * 2);
+    const innerHeight = Math.max(0, this.hudHeight - this.hudInnerMargin * 2);
+    this.hudInnerPanel.setDisplaySize(innerWidth, innerHeight);
     this.scoreText.setFontSize(this.hudScoreFontSize);
     this.timeText.setFontSize(this.hudTimeFontSize);
     this.coinText.setFontSize(this.hudStatFontSize);
@@ -828,6 +834,8 @@ export class GameScene extends Phaser.Scene {
     this.uiScale = Phaser.Math.Clamp(baseScale, 1, HUD_MAX_SCALE);
     this.hudHeight = Math.round(HUD_BASE_HEIGHT * this.uiScale);
     this.hudPadding = Math.round(HUD_BASE_PADDING * this.uiScale);
+    this.hudOuterPadding = Math.round(HUD_BASE_OUTER_PADDING * this.uiScale);
+    this.hudInnerMargin = Math.round(HUD_BASE_INNER_MARGIN * this.uiScale);
     this.hudContentOffsetY = Math.round(HUD_BASE_CONTENT_OFFSET_Y * this.uiScale);
     this.hudScoreFontSize = Math.round(HUD_BASE_SCORE_FONT_SIZE * this.uiScale);
     this.hudTimeFontSize = Math.round(HUD_BASE_TIME_FONT_SIZE * this.uiScale);
@@ -840,11 +848,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private layoutHud(viewportWidth: number) {
-    const centerY = this.hudHeight / 2 + this.hudContentOffsetY;
-    this.hudBackground.setPosition(0, 0);
-    this.hudFrame.setPosition(0, 0);
-    this.scoreText.setPosition(this.hudPadding, centerY);
-    this.timeText.setPosition(viewportWidth / 2, centerY);
+    const baseX = this.hudOuterPadding;
+    const baseY = this.hudOuterPadding;
+    const baseWidth = Math.max(0, viewportWidth - this.hudOuterPadding * 2);
+    const innerX = baseX + this.hudInnerMargin;
+    const innerY = baseY + this.hudInnerMargin;
+    const innerWidth = Math.max(0, baseWidth - this.hudInnerMargin * 2);
+    const innerHeight = Math.max(0, this.hudHeight - this.hudInnerMargin * 2);
+    const centerY = innerY + innerHeight / 2 + this.hudContentOffsetY;
+    this.hudBackground.setPosition(baseX, baseY);
+    this.hudInnerPanel.setPosition(innerX + innerWidth / 2, innerY + innerHeight / 2);
+    this.scoreText.setPosition(innerX + this.hudPadding, centerY);
+    this.timeText.setPosition(innerX + innerWidth / 2, centerY);
 
     const coinTextWidth = this.coinText.width;
     const coinIconWidth = this.coinIcon.displayWidth;
@@ -853,7 +868,7 @@ export class GameScene extends Phaser.Scene {
     const fishIconWidth = this.fishIcon.displayWidth;
     const fishBlockWidth = fishIconWidth + this.hudFishGap + fishTextWidth;
     const rightGroupWidth = fishBlockWidth + this.hudGroupGap + coinBlockWidth;
-    const fishBlockX = viewportWidth - this.hudPadding - rightGroupWidth;
+    const fishBlockX = innerX + innerWidth - this.hudPadding - rightGroupWidth;
     const coinBlockX = fishBlockX + fishBlockWidth + this.hudGroupGap;
 
     this.coinIcon.setPosition(0, 0);
