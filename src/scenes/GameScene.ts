@@ -35,16 +35,18 @@ const COIN_CHANCE = 0.22;
 const COIN_SCALE = 0.55;
 const CLOUD_SCROLL_SPEED = 0.006;
 const BASE_BG_COLOR = 0x9fd7ff;
-const HUD_HEIGHT = 56;
-const HUD_PADDING = 16;
-const HUD_CONTENT_OFFSET_Y = 4;
+const HUD_BASE_HEIGHT = 60;
+const HUD_BASE_PADDING = 16;
+const HUD_BASE_CONTENT_OFFSET_Y = 4;
 const HUD_DEPTH = 10;
 const HUD_TEXT_DEPTH = 12;
-const HUD_COIN_SCALE = 0.35;
-const HUD_COIN_GAP = 6;
-const HUD_FISH_SCALE = 0.4;
-const HUD_FISH_GAP = 8;
-const HUD_GROUP_GAP = 16;
+const HUD_BASE_FONT_SIZE = 22;
+const HUD_BASE_COIN_SCALE = 0.35;
+const HUD_BASE_COIN_GAP = 8;
+const HUD_BASE_FISH_SCALE = 0.4;
+const HUD_BASE_FISH_GAP = 8;
+const HUD_BASE_GROUP_GAP = 16;
+const HUD_MAX_SCALE = 1.35;
 const GAME_OVER_OVERLAY_ALPHA = 0.55;
 const GAME_OVER_PANEL_MAX_WIDTH = 0.78;
 const GAME_OVER_PANEL_MAX_HEIGHT = 0.6;
@@ -93,6 +95,16 @@ export class GameScene extends Phaser.Scene {
   private fishPowerCount = 0;
   private fishPulseTween?: Phaser.Tweens.Tween;
   private hudBackground!: Phaser.GameObjects.Image;
+  private hudScale = 1;
+  private hudHeight = HUD_BASE_HEIGHT;
+  private hudPadding = HUD_BASE_PADDING;
+  private hudContentOffsetY = HUD_BASE_CONTENT_OFFSET_Y;
+  private hudFontSize = HUD_BASE_FONT_SIZE;
+  private hudCoinScale = HUD_BASE_COIN_SCALE;
+  private hudFishScale = HUD_BASE_FISH_SCALE;
+  private hudCoinGap = HUD_BASE_COIN_GAP;
+  private hudFishGap = HUD_BASE_FISH_GAP;
+  private hudGroupGap = HUD_BASE_GROUP_GAP;
   private coinsCollected = 0;
   private gameOver = false;
   private lastScoreValue = 0;
@@ -248,7 +260,7 @@ export class GameScene extends Phaser.Scene {
     };
     this.input.keyboard?.on('keydown', this.keyDownHandler);
 
-    this.createHud(width);
+    this.createHud(width, height);
 
     this.statusText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
       fontSize: '28px',
@@ -703,7 +715,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleResize(gameSize: Phaser.Structs.Size) {
     this.resizeBackgrounds(gameSize.width, gameSize.height);
-    this.resizeHud(gameSize.width);
+    this.resizeHud(gameSize.width, gameSize.height);
     this.layoutGameOverModal(gameSize.width, gameSize.height);
   }
 
@@ -717,37 +729,40 @@ export class GameScene extends Phaser.Scene {
     this.cloudLayer.setDisplaySize(width, cloudHeight);
   }
 
-  private createHud(viewportWidth: number) {
+  private createHud(viewportWidth: number, viewportHeight: number) {
     this.hudBackground = this.add.image(0, 0, UI_RECTANGLE_GRADIENT).setOrigin(0, 0);
     this.hudBackground.setAlpha(0.85);
     this.hudBackground.setDepth(HUD_DEPTH);
-    this.hudBackground.setDisplaySize(viewportWidth, HUD_HEIGHT);
+    this.hudBackground.setDisplaySize(viewportWidth, HUD_BASE_HEIGHT);
 
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: '18px',
+      fontSize: `${HUD_BASE_FONT_SIZE}px`,
       color: '#f6f7fb',
       stroke: '#1d1e2c',
-      strokeThickness: 2
+      strokeThickness: 1
     };
 
     this.scoreText = this.add.text(0, 0, '', textStyle).setOrigin(0, 0.5);
     this.scoreText.setDepth(HUD_TEXT_DEPTH);
+    this.scoreText.setShadow(0, 2, '#0b0b0b', 2, true, true);
 
     this.timeText = this.add.text(0, 0, '', textStyle).setOrigin(0.5, 0.5);
     this.timeText.setDepth(HUD_TEXT_DEPTH);
+    this.timeText.setShadow(0, 2, '#0b0b0b', 2, true, true);
 
     this.coinIcon = this.add.image(0, 0, COIN_1).setOrigin(0, 0.5);
-    this.coinIcon.setScale(HUD_COIN_SCALE);
+    this.coinIcon.setScale(HUD_BASE_COIN_SCALE);
     this.coinIcon.setDepth(HUD_TEXT_DEPTH);
 
     this.coinText = this.add.text(0, 0, '', textStyle).setOrigin(0, 0.5);
     this.coinText.setDepth(HUD_TEXT_DEPTH);
+    this.coinText.setShadow(0, 2, '#0b0b0b', 2, true, true);
 
     this.coinGroup = this.add.container(0, 0, [this.coinIcon, this.coinText]);
     this.coinGroup.setDepth(HUD_TEXT_DEPTH);
 
     this.fishIcon = this.add.image(0, 0, FISH_YELLOW_REST).setOrigin(0, 0.5);
-    this.fishIcon.setScale(HUD_FISH_SCALE);
+    this.fishIcon.setScale(HUD_BASE_FISH_SCALE);
     this.fishIcon.setDepth(HUD_TEXT_DEPTH);
 
     this.fishOverlay = this.add.rectangle(0, 0, 1, 1, 0x0b0b0b, 0.65).setOrigin(0, 0);
@@ -755,44 +770,66 @@ export class GameScene extends Phaser.Scene {
 
     this.fishText = this.add.text(0, 0, '0/4', textStyle).setOrigin(0, 0.5);
     this.fishText.setDepth(HUD_TEXT_DEPTH);
+    this.fishText.setShadow(0, 2, '#0b0b0b', 2, true, true);
 
     this.fishGroup = this.add.container(0, 0, [this.fishIcon, this.fishOverlay, this.fishText]);
     this.fishGroup.setDepth(HUD_TEXT_DEPTH);
 
     this.setFishPowerProgress(0);
     this.stopFishPulse();
-    this.resizeHud(viewportWidth);
+    this.resizeHud(viewportWidth, viewportHeight);
   }
 
-  private resizeHud(viewportWidth: number) {
-    this.hudBackground.setDisplaySize(viewportWidth, HUD_HEIGHT);
+  private resizeHud(viewportWidth: number, viewportHeight: number) {
+    this.applyHudScale(viewportWidth, viewportHeight);
+    this.hudBackground.setDisplaySize(viewportWidth, this.hudHeight);
+    this.scoreText.setFontSize(this.hudFontSize);
+    this.timeText.setFontSize(this.hudFontSize);
+    this.coinText.setFontSize(this.hudFontSize);
+    this.fishText.setFontSize(this.hudFontSize);
+    this.coinIcon.setScale(this.hudCoinScale);
+    this.fishIcon.setScale(this.hudFishScale);
     this.layoutHud(viewportWidth);
   }
 
+  private applyHudScale(viewportWidth: number, viewportHeight: number) {
+    const baseScale = Math.min(viewportWidth / GAME_WIDTH, viewportHeight / GAME_HEIGHT);
+    this.hudScale = Phaser.Math.Clamp(baseScale, 1, HUD_MAX_SCALE);
+    this.hudHeight = Math.round(HUD_BASE_HEIGHT * this.hudScale);
+    this.hudPadding = Math.round(HUD_BASE_PADDING * this.hudScale);
+    this.hudContentOffsetY = Math.round(HUD_BASE_CONTENT_OFFSET_Y * this.hudScale);
+    this.hudFontSize = Math.round(Phaser.Math.Clamp(HUD_BASE_FONT_SIZE * this.hudScale, 22, 30));
+    this.hudCoinScale = HUD_BASE_COIN_SCALE * this.hudScale;
+    this.hudFishScale = HUD_BASE_FISH_SCALE * this.hudScale;
+    this.hudCoinGap = Math.round(HUD_BASE_COIN_GAP * this.hudScale);
+    this.hudFishGap = Math.round(HUD_BASE_FISH_GAP * this.hudScale);
+    this.hudGroupGap = Math.round(HUD_BASE_GROUP_GAP * this.hudScale);
+  }
+
   private layoutHud(viewportWidth: number) {
-    const centerY = HUD_HEIGHT / 2 + HUD_CONTENT_OFFSET_Y;
+    const centerY = this.hudHeight / 2 + this.hudContentOffsetY;
     this.hudBackground.setPosition(0, 0);
-    this.scoreText.setPosition(HUD_PADDING, centerY);
+    this.scoreText.setPosition(this.hudPadding, centerY);
     this.timeText.setPosition(viewportWidth / 2, centerY);
 
     const coinTextWidth = this.coinText.width;
     const coinIconWidth = this.coinIcon.displayWidth;
-    const coinBlockWidth = coinIconWidth + HUD_COIN_GAP + coinTextWidth;
+    const coinBlockWidth = coinIconWidth + this.hudCoinGap + coinTextWidth;
     const fishTextWidth = this.fishText.width;
     const fishIconWidth = this.fishIcon.displayWidth;
-    const fishBlockWidth = fishIconWidth + HUD_FISH_GAP + fishTextWidth;
-    const rightGroupWidth = fishBlockWidth + HUD_GROUP_GAP + coinBlockWidth;
-    const fishBlockX = viewportWidth - HUD_PADDING - rightGroupWidth;
-    const coinBlockX = fishBlockX + fishBlockWidth + HUD_GROUP_GAP;
+    const fishBlockWidth = fishIconWidth + this.hudFishGap + fishTextWidth;
+    const rightGroupWidth = fishBlockWidth + this.hudGroupGap + coinBlockWidth;
+    const fishBlockX = viewportWidth - this.hudPadding - rightGroupWidth;
+    const coinBlockX = fishBlockX + fishBlockWidth + this.hudGroupGap;
 
     this.coinIcon.setPosition(0, 0);
-    this.coinText.setPosition(coinIconWidth + HUD_COIN_GAP, 0);
+    this.coinText.setPosition(coinIconWidth + this.hudCoinGap, 0);
     this.coinGroup.setPosition(coinBlockX, centerY);
 
     const fishIconHeight = this.fishIcon.displayHeight;
     this.fishIcon.setPosition(0, 0);
     this.fishOverlay.setPosition(0, -fishIconHeight / 2);
-    this.fishText.setPosition(fishIconWidth + HUD_FISH_GAP, 0);
+    this.fishText.setPosition(fishIconWidth + this.hudFishGap, 0);
     this.fishGroup.setPosition(fishBlockX, centerY);
     this.setFishPowerProgress(this.fishPowerProgress);
   }
