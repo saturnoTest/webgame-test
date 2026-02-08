@@ -15,7 +15,6 @@ import {
   PLAYER_IDLE,
   TERRAIN_GRASS_BOTTOM,
   TERRAIN_GRASS_TOP,
-  UI_ARROW_BACK,
   UI_BUTTON_SQUARE_BORDER,
   UI_RECTANGLE_GRADIENT,
   UI_RECTANGLE_DEPTH_LINE,
@@ -117,7 +116,6 @@ export class GameScene extends Phaser.Scene {
   private gameOverTitleText?: Phaser.GameObjects.Text;
   private gameOverScoreText?: Phaser.GameObjects.Text;
   private gameOverButtons: Phaser.GameObjects.Container[] = [];
-  private gameOverArrow?: Phaser.GameObjects.Image;
   private audioManager = new AudioManager();
   private nextStepSfxTime = 0;
   private nextSlideSfxTime = 0;
@@ -520,22 +518,6 @@ export class GameScene extends Phaser.Scene {
       this.exitToSplash();
     });
 
-    this.gameOverArrow = this.add.image(0, 0, UI_ARROW_BACK).setOrigin(0.5);
-    this.gameOverArrow.setScrollFactor(0);
-    this.gameOverArrow.setInteractive({ useHandCursor: true });
-    this.gameOverArrow.on('pointerover', () => {
-      this.gameOverArrow?.setScale(GAME_OVER_BUTTON_HOVER_SCALE);
-    });
-    this.gameOverArrow.on('pointerout', () => {
-      this.gameOverArrow?.setScale(1);
-    });
-    this.gameOverArrow.on('pointerdown', () => {
-      this.gameOverArrow?.setScale(GAME_OVER_BUTTON_PRESS_SCALE);
-    });
-    this.gameOverArrow.on('pointerup', () => {
-      this.exitToSplash();
-    });
-
     this.gameOverButtons = [retryButton, homeButton];
     this.gameOverContainer = this.add.container(0, 0, [
       this.gameOverBackPlate,
@@ -543,8 +525,7 @@ export class GameScene extends Phaser.Scene {
       this.gameOverTitleText,
       this.gameOverScoreText,
       retryButton,
-      homeButton,
-      this.gameOverArrow
+      homeButton
     ]);
     this.gameOverContainer.setDepth(GAME_OVER_PANEL_DEPTH);
     this.gameOverContainer.setScrollFactor(0);
@@ -559,21 +540,28 @@ export class GameScene extends Phaser.Scene {
   ) {
     const buttonImage = this.add.image(0, 0, UI_BUTTON_SQUARE_BORDER).setOrigin(0.5);
     buttonImage.setScrollFactor(0);
+    buttonImage.setName('image');
     const buttonText = this.add.text(0, 0, label, textStyle).setOrigin(0.5);
-    const container = this.add.container(0, 0, [buttonImage, buttonText]);
+    buttonText.setName('text');
+    const hitbox = this.add.rectangle(0, 0, buttonImage.displayWidth, buttonImage.displayHeight, 0x000000, 0);
+    hitbox.setOrigin(0.5);
+    hitbox.setScrollFactor(0);
+    hitbox.setName('hitbox');
+    hitbox.setInteractive({ useHandCursor: true });
+    const container = this.add.container(0, 0, [buttonImage, buttonText, hitbox]);
     container.setDepth(GAME_OVER_TEXT_DEPTH);
     container.setScrollFactor(0);
     this.updateGameOverButtonHitArea(container, buttonImage.displayWidth, buttonImage.displayHeight);
-    container.on('pointerover', () => {
+    hitbox.on('pointerover', () => {
       container.setScale(GAME_OVER_BUTTON_HOVER_SCALE);
     });
-    container.on('pointerout', () => {
+    hitbox.on('pointerout', () => {
       container.setScale(1);
     });
-    container.on('pointerdown', () => {
+    hitbox.on('pointerdown', () => {
       container.setScale(GAME_OVER_BUTTON_PRESS_SCALE);
     });
-    container.on('pointerup', () => {
+    hitbox.on('pointerup', () => {
       container.setScale(GAME_OVER_BUTTON_HOVER_SCALE);
       onClick();
     });
@@ -581,12 +569,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateGameOverButtonHitArea(container: Phaser.GameObjects.Container, width: number, height: number) {
-    container.setSize(width, height);
-    const hitArea = new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height);
-    container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
-    if (container.input) {
-      container.input.cursor = 'pointer';
+    const hitbox = container.getByName('hitbox') as Phaser.GameObjects.Rectangle | null;
+    if (!hitbox) {
+      return;
     }
+    hitbox.setSize(width, height);
+    hitbox.setDisplaySize(width, height);
+    hitbox.setPosition(0, 0);
+    hitbox.setOrigin(0.5);
   }
 
   private layoutGameOverModal(viewportWidth: number, viewportHeight: number, animate = false) {
@@ -659,35 +649,20 @@ export class GameScene extends Phaser.Scene {
 
     const [retryButton, homeButton] = this.gameOverButtons;
     if (retryButton && homeButton) {
-      const retryImage = retryButton.getAt(0) as Phaser.GameObjects.Image;
-      const retryText = retryButton.getAt(1) as Phaser.GameObjects.Text;
+      const retryImage = retryButton.getByName('image') as Phaser.GameObjects.Image;
+      const retryText = retryButton.getByName('text') as Phaser.GameObjects.Text;
       retryImage.setDisplaySize(buttonWidth, retryButtonHeight);
       this.updateGameOverButtonHitArea(retryButton, buttonWidth, retryButtonHeight);
       retryText.setFontSize(buttonFontSize);
       const firstButtonY = scoreY + scoreHeight * 0.5 + verticalSpacing + retryButtonHeight * 0.5;
       retryButton.setPosition(0, firstButtonY);
 
-      const homeImage = homeButton.getAt(0) as Phaser.GameObjects.Image;
-      const homeText = homeButton.getAt(1) as Phaser.GameObjects.Text;
+      const homeImage = homeButton.getByName('image') as Phaser.GameObjects.Image;
+      const homeText = homeButton.getByName('text') as Phaser.GameObjects.Text;
       homeImage.setDisplaySize(buttonWidth, homeButtonHeight);
       this.updateGameOverButtonHitArea(homeButton, buttonWidth, homeButtonHeight);
       homeText.setFontSize(buttonFontSize);
       homeButton.setPosition(0, firstButtonY + retryButtonHeight * 0.5 + buttonSpacing + homeButtonHeight * 0.5);
-    }
-
-    if (this.gameOverArrow) {
-      const arrowSize = Math.min(panelDisplayWidth, panelDisplayHeight) * 0.12;
-      const arrowMargin = Math.max(10, Math.min(14, panelDisplayWidth * 0.04));
-      const arrowYOffset = Math.round(Math.min(10, panelDisplayHeight * 0.03));
-      this.gameOverArrow.setDisplaySize(arrowSize, arrowSize);
-      this.gameOverArrow.setPosition(
-        -panelDisplayWidth * 0.5 + arrowMargin + arrowSize * 0.5,
-        Math.max(
-          -panelDisplayHeight * 0.5 + arrowMargin + arrowSize * 0.5,
-          this.gameOverTitleText.getBounds().centerY + arrowYOffset
-        )
-      );
-      this.gameOverArrow.setScale(1);
     }
 
     if (animate) {
@@ -706,8 +681,6 @@ export class GameScene extends Phaser.Scene {
   private destroyGameOverModal() {
     this.gameOverButtons.forEach((button) => button.destroy(true));
     this.gameOverButtons = [];
-    this.gameOverArrow?.destroy(true);
-    this.gameOverArrow = undefined;
     this.gameOverTitleText?.destroy();
     this.gameOverTitleText = undefined;
     this.gameOverScoreText?.destroy();
