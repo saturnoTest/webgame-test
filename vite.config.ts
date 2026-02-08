@@ -1,8 +1,14 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
-  server: {
-    port: 5173,
-    open: false
-  }
+export default defineConfig(({ command }) => {
+  const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1];
+  const base = command === 'build' && repoName ? `/${repoName}/` : '/';
+
+  return {
+    base,
+    server: {
+      port: 5173,
+      open: false
+    }
+  };
 });

@@ -58,6 +58,19 @@ npm run preview
 npm run typecheck
 ```
 
+## Deploy (GitHub Pages)
+
+1) En GitHub, ve a **Settings → Pages** y selecciona **Source: GitHub Actions**.
+2) El deploy se ejecuta automáticamente en cada push a `main` (también puedes ejecutarlo manualmente desde Actions).
+3) URL esperada:
+   - `https://<OWNER>.github.io/<REPO>/`
+
+**Nota sobre Vite base path:** el build usa `base: "/<REPO>/"` en GitHub Actions para que los assets se resuelvan desde la ruta del repo en GitHub Pages. En local, `npm run dev` mantiene `base: "/"`.  
+
+**Troubleshooting rápido**
+- Pantalla en blanco: revisa que el `base` coincida con el nombre del repo y que los assets carguen desde `/<REPO>/`.
+- Revisa los logs del workflow en **Actions** para ver errores de build o deploy.
+
 ## Metodología / Gobernanza (IA + PRs humanos)
 - **Repo org**: MVPFlow.
 - **IA/bot**: saturnoTest (crea PRs).
