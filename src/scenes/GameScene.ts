@@ -75,6 +75,14 @@ const FISH_MAX_POWER = 4;
 const FISH_PULSE_MULTIPLIER = 1.1;
 const FISH_PULSE_DURATION = 220;
 const GROUND_VISUAL_DROP_RATIO = 0.45;
+const MOBILE_JOYSTICK_BASE_SIZE = 140;
+const MOBILE_JOYSTICK_THUMB_SIZE = 70;
+const MOBILE_JOYSTICK_RADIUS = 48;
+const MOBILE_JOYSTICK_DEADZONE = 0.15;
+const MOBILE_JUMP_BUTTON_SIZE = 120;
+const MOBILE_CONTROL_MARGIN = 24;
+const MOBILE_JUMP_BUTTON_DEPTH = 20;
+const MOBILE_JOYSTICK_DEPTH = 18;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -145,6 +153,19 @@ export class GameScene extends Phaser.Scene {
   private pointerDownHandler?: (pointer: Phaser.Input.Pointer) => void;
   private pointerUpHandler?: () => void;
   private keyDownHandler?: (event: KeyboardEvent) => void;
+  private mobileControlsEnabled = false;
+  private joystickContainer?: Phaser.GameObjects.Container;
+  private joystickBase?: Phaser.GameObjects.Image;
+  private joystickThumb?: Phaser.GameObjects.Image;
+  private joystickRadius = 0;
+  private joystickCenter = new Phaser.Math.Vector2(0, 0);
+  private joystickPointerId?: number;
+  private joystickMoveHandler?: (pointer: Phaser.Input.Pointer) => void;
+  private joystickUpHandler?: (pointer: Phaser.Input.Pointer) => void;
+  private jumpButton?: Phaser.GameObjects.Container;
+  private jumpButtonImage?: Phaser.GameObjects.Image;
+  private jumpButtonText?: Phaser.GameObjects.Text;
+  private jumpButtonHitbox?: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super('game');
@@ -245,21 +266,24 @@ export class GameScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
 
-    this.pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
-      if (this.gameOver) {
-        return;
-      }
-      this.moveDirection = pointer.x < GAME_WIDTH / 2 ? -1 : 1;
-    };
-    this.input.on('pointerdown', this.pointerDownHandler);
+    const enableMobileControls = this.shouldUseMobileControls(width);
+    if (!enableMobileControls) {
+      this.pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
+        if (this.gameOver) {
+          return;
+        }
+        this.moveDirection = pointer.x < GAME_WIDTH / 2 ? -1 : 1;
+      };
+      this.input.on('pointerdown', this.pointerDownHandler);
 
-    this.pointerUpHandler = () => {
-      if (this.gameOver) {
-        return;
-      }
-      this.moveDirection = 0;
-    };
-    this.input.on('pointerup', this.pointerUpHandler);
+      this.pointerUpHandler = () => {
+        if (this.gameOver) {
+          return;
+        }
+        this.moveDirection = 0;
+      };
+      this.input.on('pointerup', this.pointerUpHandler);
+    }
 
     this.keyDownHandler = (event: KeyboardEvent) => {
       if (event.repeat) {
@@ -273,6 +297,9 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', this.keyDownHandler);
 
     this.createHud(width, height);
+    if (enableMobileControls) {
+      this.createMobileControls(width, height);
+    }
 
     this.statusText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
       fontSize: '28px',
@@ -313,6 +340,12 @@ export class GameScene extends Phaser.Scene {
       if (this.keyDownHandler) {
         this.input.keyboard?.off('keydown', this.keyDownHandler);
       }
+      if (this.joystickMoveHandler) {
+        this.input.off('pointermove', this.joystickMoveHandler);
+      }
+      if (this.joystickUpHandler) {
+        this.input.off('pointerup', this.joystickUpHandler);
+      }
     });
   }
 
@@ -345,8 +378,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (isGrounded && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
-      this.player.setVelocityY(this.currentJumpVelocity);
-      this.audioManager.playSfx(this, SFX_PLAYER_JUMP);
+      this.tryJump();
     }
 
     this.player.setVelocityX(direction * this.currentMoveSpeed);
@@ -479,6 +511,7 @@ export class GameScene extends Phaser.Scene {
     this.coins.setVelocityY(0);
     this.fishPickups.setVelocityX(0);
     this.moveDirection = 0;
+    this.resetJoystick();
     this.statusText.setText('');
     this.showGameOverModal();
     this.audioManager.playSfx(this, SFX_PLAYER_DEAD);
@@ -729,6 +762,7 @@ export class GameScene extends Phaser.Scene {
     this.resizeBackgrounds(gameSize.width, gameSize.height);
     this.resizeHud(gameSize.width, gameSize.height);
     this.layoutGameOverModal(gameSize.width, gameSize.height);
+    this.layoutMobileControls(gameSize.width, gameSize.height);
   }
 
   private resizeBackgrounds(width: number, height: number) {
@@ -925,6 +959,144 @@ export class GameScene extends Phaser.Scene {
       this.fishPulseTween = undefined;
     }
     this.fishGroup?.setScale(1);
+  }
+
+  private shouldUseMobileControls(viewportWidth: number) {
+    const touchCapable = this.sys.game.device.input.touch || this.input.pointer1?.wasTouch;
+    return Boolean(touchCapable) || viewportWidth < 520;
+  }
+
+  private createMobileControls(viewportWidth: number, viewportHeight: number) {
+    this.mobileControlsEnabled = true;
+    this.joystickContainer = this.add.container(0, 0);
+    this.joystickContainer.setDepth(MOBILE_JOYSTICK_DEPTH);
+    this.joystickContainer.setScrollFactor(0);
+
+    this.joystickBase = this.add.image(0, 0, UI_ROUND_FLAT).setOrigin(0.5);
+    this.joystickBase.setAlpha(0.45);
+    this.joystickThumb = this.add.image(0, 0, UI_ROUND_FLAT).setOrigin(0.5);
+    this.joystickThumb.setAlpha(0.85);
+
+    this.joystickContainer.add([this.joystickBase, this.joystickThumb]);
+
+    this.joystickMoveHandler = (pointer: Phaser.Input.Pointer) => {
+      if (this.joystickPointerId !== pointer.id) {
+        return;
+      }
+      this.updateJoystick(pointer);
+    };
+    this.joystickUpHandler = (pointer: Phaser.Input.Pointer) => {
+      if (this.joystickPointerId !== pointer.id) {
+        return;
+      }
+      this.resetJoystick();
+    };
+
+    this.joystickBase.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.gameOver) {
+        return;
+      }
+      this.joystickPointerId = pointer.id;
+      this.updateJoystick(pointer);
+    });
+    this.input.on('pointermove', this.joystickMoveHandler);
+    this.input.on('pointerup', this.joystickUpHandler);
+
+    const jumpStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '20px',
+      fontStyle: '700',
+      color: '#ffffff',
+      align: 'center'
+    };
+    this.jumpButtonImage = this.add.image(0, 0, UI_ROUND_FLAT).setOrigin(0.5);
+    this.jumpButtonImage.setAlpha(0.55);
+    this.jumpButtonText = this.add.text(0, 0, 'JUMP', jumpStyle).setOrigin(0.5);
+    this.jumpButtonHitbox = this.add.rectangle(0, 0, 1, 1, 0x000000, 0);
+    this.jumpButtonHitbox.setOrigin(0.5);
+    this.jumpButtonHitbox.setInteractive();
+    this.jumpButton = this.add.container(0, 0, [this.jumpButtonImage, this.jumpButtonText, this.jumpButtonHitbox]);
+    this.jumpButton.setDepth(MOBILE_JUMP_BUTTON_DEPTH);
+    this.jumpButton.setScrollFactor(0);
+
+    this.jumpButtonHitbox.on('pointerdown', () => {
+      if (this.gameOver) {
+        return;
+      }
+      this.jumpButton?.setScale(0.96);
+      this.jumpButtonImage?.setTint(0xdfe8ff);
+      this.tryJump();
+    });
+    this.jumpButtonHitbox.on('pointerup', () => {
+      this.jumpButton?.setScale(1);
+      this.jumpButtonImage?.clearTint();
+    });
+    this.jumpButtonHitbox.on('pointerout', () => {
+      this.jumpButton?.setScale(1);
+      this.jumpButtonImage?.clearTint();
+    });
+
+    this.layoutMobileControls(viewportWidth, viewportHeight);
+  }
+
+  private layoutMobileControls(viewportWidth: number, viewportHeight: number) {
+    if (!this.mobileControlsEnabled || !this.joystickContainer || !this.joystickBase || !this.joystickThumb || !this.jumpButton) {
+      return;
+    }
+
+    const margin = Math.round(MOBILE_CONTROL_MARGIN * this.uiScale);
+    const baseSize = MOBILE_JOYSTICK_BASE_SIZE * this.uiScale;
+    const thumbSize = MOBILE_JOYSTICK_THUMB_SIZE * this.uiScale;
+    const jumpSize = MOBILE_JUMP_BUTTON_SIZE * this.uiScale;
+    this.joystickRadius = MOBILE_JOYSTICK_RADIUS * this.uiScale;
+
+    this.joystickBase.setDisplaySize(baseSize, baseSize);
+    this.joystickBase.setInteractive(new Phaser.Geom.Circle(0, 0, baseSize / 2), Phaser.Geom.Circle.Contains);
+    this.joystickThumb.setDisplaySize(thumbSize, thumbSize);
+    this.joystickThumb.setPosition(0, 0);
+    this.joystickContainer.setPosition(margin + baseSize / 2, viewportHeight - margin - baseSize / 2);
+    this.joystickCenter.set(this.joystickContainer.x, this.joystickContainer.y);
+
+    this.jumpButtonImage?.setDisplaySize(jumpSize, jumpSize);
+    this.jumpButtonText?.setFontSize(Math.round(20 * this.uiScale));
+    const jumpX = viewportWidth - margin - jumpSize / 2;
+    const jumpY = viewportHeight - margin - jumpSize / 2;
+    this.jumpButton.setPosition(jumpX, jumpY);
+    this.jumpButtonHitbox?.setSize(jumpSize, jumpSize);
+    this.jumpButtonHitbox?.setDisplaySize(jumpSize, jumpSize);
+    this.jumpButtonHitbox?.setPosition(0, 0);
+  }
+
+  private updateJoystick(pointer: Phaser.Input.Pointer) {
+    if (!this.joystickThumb) {
+      return;
+    }
+    const deltaX = pointer.x - this.joystickCenter.x;
+    const clampedX = Phaser.Math.Clamp(deltaX, -this.joystickRadius, this.joystickRadius);
+    const normalizedX = this.joystickRadius > 0 ? clampedX / this.joystickRadius : 0;
+    this.joystickThumb.setPosition(clampedX, 0);
+    if (Math.abs(normalizedX) < MOBILE_JOYSTICK_DEADZONE) {
+      this.moveDirection = 0;
+    } else if (normalizedX < 0) {
+      this.moveDirection = -1;
+    } else {
+      this.moveDirection = 1;
+    }
+  }
+
+  private resetJoystick() {
+    this.joystickPointerId = undefined;
+    this.moveDirection = 0;
+    this.joystickThumb?.setPosition(0, 0);
+  }
+
+  private tryJump() {
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    const isGrounded = playerBody.blocked.down || playerBody.touching.down;
+    if (!isGrounded) {
+      return;
+    }
+    this.player.setVelocityY(this.currentJumpVelocity);
+    this.audioManager.playSfx(this, SFX_PLAYER_JUMP);
   }
 
   private handleDoubleTap(event: KeyboardEvent) {
